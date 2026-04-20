@@ -1,0 +1,88 @@
+import { NavFooter } from '@/components/nav-footer';
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { BookOpenCheck, BriefcaseBusiness, ClipboardCheck, FileOutput, GraduationCap, LayoutGrid, Megaphone, ShieldCheck, Users, WalletCards } from 'lucide-react';
+import AppLogo from './app-logo';
+
+const footerNavItems: NavItem[] = [
+    {
+        title: 'Profile',
+        url: '/settings/profile',
+        icon: ShieldCheck,
+    },
+    {
+        title: 'Appearance',
+        url: '/settings/appearance',
+        icon: BookOpenCheck,
+    },
+];
+
+export function AppSidebar() {
+    const page = usePage<SharedData>();
+    const role = page.props.auth.user?.role;
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            url: '/dashboard',
+            icon: LayoutGrid,
+        },
+        ...(role === 'admin'
+            ? [
+                  { 
+                      title: 'Data Peserta', 
+                      url: '#', 
+                      icon: Users,
+                      isActive: page.url.startsWith('/peserta-'),
+                      items: [
+                          { title: 'Peserta Didik', url: '/peserta-murid' },
+                          { title: 'Wali Murid', url: '/peserta-wali' },
+                          { title: 'PPDB', url: '/peserta-ppdb' },
+                      ]
+                  },
+                  { title: 'Staff', url: '/staff', icon: ShieldCheck },
+                  { title: 'Classes', url: '/classes', icon: BookOpenCheck },
+                  { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
+                  { title: 'Communications', url: '/communications', icon: Megaphone },
+                  { title: 'Resources', url: '/resources', icon: WalletCards },
+                  { title: 'Reports', url: '/reports', icon: FileOutput },
+              ]
+            : []),
+        ...(role === 'teacher'
+            ? [
+                  { title: 'Classes', url: '/classes', icon: BookOpenCheck },
+                  { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
+                  { title: 'Reports', url: '/reports', icon: FileOutput },
+              ]
+            : []),
+        ...(role === 'registered_user' ? [{ title: 'Workspace', url: '/dashboard', icon: BriefcaseBusiness }] : []),
+    ];
+
+    return (
+        <Sidebar collapsible="icon" variant="inset">
+            <SidebarHeader>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton size="lg" asChild>
+                            <Link href="/dashboard" prefetch>
+                                <AppLogo />
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarHeader>
+
+            <SidebarContent>
+                <NavMain items={mainNavItems} />
+            </SidebarContent>
+
+            <SidebarFooter>
+                <NavFooter items={footerNavItems} className="mt-auto" />
+                {page.props.auth.user && <NavUser />}
+            </SidebarFooter>
+        </Sidebar>
+    );
+}
