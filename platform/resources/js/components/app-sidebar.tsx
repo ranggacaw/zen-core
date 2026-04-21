@@ -65,7 +65,16 @@ export function AppSidebar() {
                           { title: 'Penggunaan Fasilitas', url: '/data-ruangan/penggunaan-fasilitas' },
                       ],
                   },
-                  { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
+                  {
+                      title: 'Absensi',
+                      url: '#',
+                      icon: LayoutGrid,
+                      isActive: page.url.startsWith('/absensi') || page.url.startsWith('/attendance'),
+                      items: [
+                          { title: 'Absensi Peserta Didik', url: '/absensi/peserta-didik' },
+                          { title: 'Absensi Peserta Didik List', url: '/absensi/peserta-didik-list' },
+                      ],
+                  },
                   { title: 'Communications', url: '/communications', icon: Megaphone },
                   { title: 'Rooms', url: '/resources', icon: WalletCards },
                   { title: 'Reports', url: '/reports', icon: FileOutput },
@@ -80,7 +89,16 @@ export function AppSidebar() {
                       isActive: page.url.startsWith('/data-ruangan') || page.url.startsWith('/classes'),
                       items: [{ title: 'Rombongan Belajar', url: '/data-ruangan/rombongan-belajar' }],
                   },
-                  { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
+                  {
+                      title: 'Absensi',
+                      url: '#',
+                      icon: LayoutGrid,
+                      isActive: page.url.startsWith('/absensi') || page.url.startsWith('/attendance'),
+                      items: [
+                          { title: 'Absensi Peserta Didik', url: '/absensi/peserta-didik' },
+                          { title: 'Absensi Peserta Didik List', url: '/absensi/peserta-didik-list' },
+                      ],
+                  },
                   { title: 'Reports', url: '/reports', icon: FileOutput },
               ]
             : []),

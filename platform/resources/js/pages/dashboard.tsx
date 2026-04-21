@@ -48,7 +48,7 @@ export default function Dashboard({ query, roleSummary, metrics, recentAttendanc
     const quickActions = role === 'teacher'
         ? [
               { label: 'Open classes', href: '/classes' },
-              { label: 'Record attendance', href: '/attendance' },
+              { label: 'Absensi peserta didik', href: '/absensi/peserta-didik' },
               { label: 'Open reports', href: '/reports' },
           ]
         : role === 'registered_user'

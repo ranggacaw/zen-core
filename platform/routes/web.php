@@ -103,6 +103,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('classes/{schoolClass}/indicators', [ClassroomController::class, 'storeIndicator'])->name('classes.indicators.store');
         Route::post('classes/{schoolClass}/assessments', [ClassroomController::class, 'storeAssessment'])->name('classes.assessments.store');
 
+        Route::get('absensi/peserta-didik', [AttendanceController::class, 'pesertaDidik'])->name('absensi.peserta-didik.index');
+        Route::post('absensi/peserta-didik', [AttendanceController::class, 'scan'])->name('absensi.peserta-didik.store');
+        Route::get('absensi/peserta-didik-list', [AttendanceController::class, 'pesertaDidikList'])->name('absensi.peserta-didik-list.index');
+
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance/scan', [AttendanceController::class, 'scan'])->name('attendance.scan');
 

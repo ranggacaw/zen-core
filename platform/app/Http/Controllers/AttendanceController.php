@@ -10,6 +10,7 @@ use App\Jobs\TrackAnalyticsEvent;
 use App\Enums\UserRole;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,59 +18,48 @@ class AttendanceController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
-        $staff = $user?->staff;
-        $assignedClassIds = collect();
+        return $this->pesertaDidik($request);
+    }
 
-        if ($user?->hasRole(UserRole::Teacher) && $staff) {
-            $assignedClassIds = ClassTeacherAssignment::query()
-                ->where('staff_id', $staff->id)
-                ->pluck('school_class_id')
-                ->unique()
-                ->values();
-        }
+    public function pesertaDidik(Request $request): Response
+    {
+        $assignedClassIds = $this->assignedClassIds($request);
+        $summaryQuery = $this->attendanceSummaryQuery($request, $assignedClassIds);
 
-        $recordsQuery = AttendanceRecord::query()
-            ->with(['student', 'schoolClass'])
-            ->latest('updated_at')
-            ->limit(20);
-
-        if ($user?->hasRole(UserRole::Teacher)) {
-            $assignedClassIds->isNotEmpty()
-                ? $recordsQuery->whereIn('school_class_id', $assignedClassIds)
-                : $recordsQuery->whereRaw('1 = 0');
-        }
-
-        $records = $recordsQuery->get();
-
-        $summaryQuery = AttendanceRecord::query()->whereDate('attendance_date', today());
-
-        if ($user?->hasRole(UserRole::Teacher)) {
-            $assignedClassIds->isNotEmpty()
-                ? $summaryQuery->whereIn('school_class_id', $assignedClassIds)
-                : $summaryQuery->whereRaw('1 = 0');
-        }
-
-        return Inertia::render('attendance/index', [
+        return Inertia::render('absensi/peserta-didik/index', [
             'todayLabel' => today()->toFormattedDateString(),
-            'scopeLabel' => $user?->hasRole(UserRole::Teacher) ? 'Assigned classes only' : 'All school attendance activity',
+            'scopeLabel' => $request->user()?->hasRole(UserRole::Teacher) ? 'Assigned classes only' : 'All school attendance activity',
             'summary' => [
                 'checked_in' => (clone $summaryQuery)->whereNotNull('check_in_at')->count(),
                 'checked_out' => (clone $summaryQuery)->whereNotNull('check_out_at')->count(),
                 'open_records' => (clone $summaryQuery)->whereNull('check_out_at')->count(),
             ],
+        ]);
+    }
+
+    public function pesertaDidikList(Request $request): Response
+    {
+        $records = $this->attendanceRecords($request, 30);
+
+        return Inertia::render('absensi/peserta-didik-list/index', [
+            'scopeLabel' => $request->user()?->hasRole(UserRole::Teacher) ? 'Assigned classes only' : 'All school attendance activity',
             'records' => $records->map(fn (AttendanceRecord $record) => [
                 'id' => $record->id,
                 'student' => $record->student?->name,
                 'student_number' => $record->student?->student_number,
                 'class' => $record->schoolClass?->name,
+                'class_context' => collect([
+                    $record->schoolClass?->name,
+                    $record->schoolClass?->grade_level,
+                    $record->schoolClass?->room_name,
+                ])->filter()->implode(' • '),
                 'attendance_date' => optional($record->attendance_date)?->toDateString(),
                 'status' => $record->check_out_at ? 'Checked out' : 'Checked in',
                 'check_in_at' => optional($record->check_in_at)?->format('H:i:s'),
                 'check_out_at' => optional($record->check_out_at)?->format('H:i:s'),
                 'scan_count' => $record->scan_count,
                 'needs_checkout' => $record->check_in_at !== null && $record->check_out_at === null,
-            ]),
+            ])->values(),
         ]);
     }
 
@@ -159,5 +149,52 @@ class AttendanceController extends Controller
         ]);
 
         return back()->with('success', "{$student->name} {$status}.");
+    }
+
+    private function assignedClassIds(Request $request): Collection
+    {
+        $user = $request->user();
+        $staff = $user?->staff;
+
+        if (! $user?->hasRole(UserRole::Teacher) || ! $staff) {
+            return collect();
+        }
+
+        return ClassTeacherAssignment::query()
+            ->where('staff_id', $staff->id)
+            ->pluck('school_class_id')
+            ->unique()
+            ->values();
+    }
+
+    private function attendanceRecords(Request $request, int $limit = 20): Collection
+    {
+        $assignedClassIds = $this->assignedClassIds($request);
+        $recordsQuery = AttendanceRecord::query()
+            ->with(['student', 'schoolClass'])
+            ->orderByDesc('attendance_date')
+            ->orderByDesc('updated_at')
+            ->limit($limit);
+
+        if ($request->user()?->hasRole(UserRole::Teacher)) {
+            $assignedClassIds->isNotEmpty()
+                ? $recordsQuery->whereIn('school_class_id', $assignedClassIds)
+                : $recordsQuery->whereRaw('1 = 0');
+        }
+
+        return $recordsQuery->get();
+    }
+
+    private function attendanceSummaryQuery(Request $request, Collection $assignedClassIds)
+    {
+        $summaryQuery = AttendanceRecord::query()->whereDate('attendance_date', today());
+
+        if ($request->user()?->hasRole(UserRole::Teacher)) {
+            $assignedClassIds->isNotEmpty()
+                ? $summaryQuery->whereIn('school_class_id', $assignedClassIds)
+                : $summaryQuery->whereRaw('1 = 0');
+        }
+
+        return $summaryQuery;
     }
 }

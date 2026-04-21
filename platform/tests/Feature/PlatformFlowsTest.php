@@ -21,6 +21,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PlatformFlowsTest extends TestCase
@@ -400,7 +401,7 @@ class PlatformFlowsTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('attendance.scan'), ['identifier' => 'STD-3001'])
+            ->post(route('absensi.peserta-didik.store'), ['identifier' => 'STD-3001'])
             ->assertRedirect();
 
         $record = AttendanceRecord::query()->where('student_id', $student->id)->first();
@@ -410,7 +411,7 @@ class PlatformFlowsTest extends TestCase
         $this->assertNull($record->check_out_at);
 
         $this->actingAs($admin)
-            ->post(route('attendance.scan'), ['identifier' => 'STD-3001'])
+            ->post(route('absensi.peserta-didik.store'), ['identifier' => 'STD-3001'])
             ->assertRedirect();
 
         $record->refresh();
@@ -424,13 +425,34 @@ class PlatformFlowsTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::Admin]);
 
         $this->actingAs($admin)
-            ->from(route('attendance.index'))
-            ->post(route('attendance.scan'), ['identifier' => 'UNKNOWN-001'])
-            ->assertRedirect(route('attendance.index'))
+            ->from(route('absensi.peserta-didik.index'))
+            ->post(route('absensi.peserta-didik.store'), ['identifier' => 'UNKNOWN-001'])
+            ->assertRedirect(route('absensi.peserta-didik.index'))
             ->assertSessionHasErrors('identifier');
     }
 
-    public function test_teacher_attendance_page_only_shows_records_for_assigned_classes(): void
+    public function test_absensi_navigation_entries_are_visible_on_the_scan_page(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+        $this->actingAs($admin)
+            ->get(route('absensi.peserta-didik.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('absensi/peserta-didik/index')
+                ->where('scopeLabel', 'All school attendance activity')
+                ->has('summary'));
+
+        $this->actingAs($admin)
+            ->get(route('absensi.peserta-didik-list.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('absensi/peserta-didik-list/index')
+                ->where('scopeLabel', 'All school attendance activity')
+                ->has('records', 0));
+    }
+
+    public function test_teacher_absensi_list_page_only_shows_records_for_assigned_classes(): void
     {
         $teacher = User::factory()->create(['role' => UserRole::Teacher, 'email' => 'attendance-teacher@example.com']);
         $staff = Staff::query()->create([
@@ -491,11 +513,58 @@ class PlatformFlowsTest extends TestCase
         ]);
 
         $this->actingAs($teacher)
-            ->get(route('attendance.index'))
+            ->get(route('absensi.peserta-didik-list.index'))
             ->assertOk()
             ->assertSee('Assigned classes only')
             ->assertSee('Aditiya Ramadhan')
             ->assertDontSee('Mila Dwi');
+    }
+
+    public function test_absensi_list_orders_recent_records_descending(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $class = SchoolClass::query()->create([
+            'name' => 'Kelas 4A',
+            'grade_level' => 'Grade 4',
+            'academic_year' => '2025/2026',
+            'room_name' => 'Flamboyan',
+        ]);
+        $olderStudent = Student::query()->create([
+            'school_class_id' => $class->id,
+            'name' => 'Bimo Pratama',
+            'student_number' => 'STD-4010',
+            'status' => 'active',
+        ]);
+        $newerStudent = Student::query()->create([
+            'school_class_id' => $class->id,
+            'name' => 'Citra Maharani',
+            'student_number' => 'STD-4011',
+            'status' => 'active',
+        ]);
+
+        AttendanceRecord::query()->create([
+            'student_id' => $olderStudent->id,
+            'school_class_id' => $class->id,
+            'attendance_date' => today()->subDay()->toDateString(),
+            'check_in_at' => now()->subDay()->setTime(7, 30),
+            'scan_count' => 1,
+        ]);
+
+        AttendanceRecord::query()->create([
+            'student_id' => $newerStudent->id,
+            'school_class_id' => $class->id,
+            'attendance_date' => today()->toDateString(),
+            'check_in_at' => now()->setTime(7, 35),
+            'scan_count' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('absensi.peserta-didik-list.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('absensi/peserta-didik-list/index')
+                ->where('records.0.student', 'Citra Maharani')
+                ->where('records.1.student', 'Bimo Pratama'));
     }
 
     public function test_teacher_can_only_record_assessments_for_an_assigned_teaching_context(): void
