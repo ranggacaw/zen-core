@@ -29,6 +29,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(MasterDataSeeder::class);
+
         $admin = User::query()->updateOrCreate([
             'email' => 'admin@zen-core.test',
         ], [

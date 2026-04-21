@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpenCheck, BriefcaseBusiness, FileOutput, LayoutGrid, Megaphone, School, ShieldCheck, Users, WalletCards } from 'lucide-react';
+import { BookOpenCheck, BriefcaseBusiness, FileOutput, LayoutGrid, Megaphone, School, Shield, ShieldCheck, Users, WalletCards } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const footerNavItems: NavItem[] = [
@@ -32,6 +32,17 @@ export function AppSidebar() {
         },
         ...(role === 'admin'
             ? [
+                  {
+                      title: 'Master Data',
+                      url: '#',
+                      icon: Shield,
+                      isActive: page.url.startsWith('/master-data'),
+                      items: [
+                          { title: 'Users', url: '/master-data/users' },
+                          { title: 'User Group', url: '/master-data/user-groups' },
+                          { title: 'Permission', url: '/master-data/permissions' },
+                      ],
+                  },
                   { 
                       title: 'People records', 
                       url: '#', 

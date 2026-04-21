@@ -8,6 +8,9 @@ use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DataRuanganController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\MasterData\PermissionController;
+use App\Http\Controllers\MasterData\RoleController;
+use App\Http\Controllers\MasterData\UserController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\SchoolInformationController;
@@ -25,6 +28,34 @@ Route::middleware(['auth'])->group(function () {
     Route::get('address-reference', AddressReferenceController::class)->name('address-reference.index');
 
     Route::middleware('role:admin')->group(function () {
+        Route::prefix('master-data')->group(function () {
+            Route::get('users', [UserController::class, 'index'])->name('master-data.users.index');
+            Route::get('users/create', [UserController::class, 'create'])->name('master-data.users.create');
+            Route::post('users', [UserController::class, 'store'])->name('master-data.users.store');
+            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('master-data.users.edit');
+            Route::put('users/{user}', [UserController::class, 'update'])->name('master-data.users.update');
+            Route::delete('users/{user}', [UserController::class, 'destroy'])->name('master-data.users.destroy');
+            Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('master-data.users.password');
+            Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('master-data.users.profile');
+
+            Route::get('user-groups', [RoleController::class, 'index'])->name('master-data.user-groups.index');
+            Route::get('user-groups/create', [RoleController::class, 'create'])->name('master-data.user-groups.create');
+            Route::post('user-groups', [RoleController::class, 'store'])->name('master-data.user-groups.store');
+            Route::get('user-groups/{role}/edit', [RoleController::class, 'edit'])->name('master-data.user-groups.edit');
+            Route::put('user-groups/{role}', [RoleController::class, 'update'])->name('master-data.user-groups.update');
+            Route::put('user-groups/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('master-data.user-groups.permissions');
+            Route::delete('user-groups/{role}', [RoleController::class, 'destroy'])->name('master-data.user-groups.destroy');
+            Route::get('user-groups/{user}/permissions', [RoleController::class, 'editUserPermissions'])->name('master-data.user-groups.user-permissions');
+            Route::put('user-groups/{user}/permissions', [RoleController::class, 'updateUserPermissions'])->name('master-data.user-groups.user-permissions-update');
+
+            Route::get('permissions', [PermissionController::class, 'index'])->name('master-data.permissions.index');
+            Route::get('permissions/create', [PermissionController::class, 'create'])->name('master-data.permissions.create');
+            Route::post('permissions', [PermissionController::class, 'store'])->name('master-data.permissions.store');
+            Route::get('permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('master-data.permissions.edit');
+            Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('master-data.permissions.update');
+            Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('master-data.permissions.destroy');
+        });
+
         Route::get('admissions', [AdmissionsController::class, 'index'])->name('admissions.index');
         Route::post('admissions', [AdmissionsController::class, 'store'])->name('admissions.store');
         Route::put('admissions/{applicant}', [AdmissionsController::class, 'update'])->name('admissions.update');
