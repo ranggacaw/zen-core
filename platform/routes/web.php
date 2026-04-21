@@ -5,6 +5,7 @@ use App\Http\Controllers\AdmissionsController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\DataRuanganController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\ReportController;
@@ -53,6 +54,20 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('staff', [StaffController::class, 'index'])->name('staff.index');
         Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
+        Route::get('staff/pengajar', [StaffController::class, 'pengajarIndex'])->name('staff.pengajar.index');
+        Route::get('staff/pengajar/create', [StaffController::class, 'createPengajar'])->name('staff.pengajar.create');
+        Route::post('staff/pengajar', [StaffController::class, 'storePengajar'])->name('staff.pengajar.store');
+        Route::get('staff/pengajar/{staff}/edit', [StaffController::class, 'editPengajar'])->name('staff.pengajar.edit');
+        Route::put('staff/pengajar/{staff}', [StaffController::class, 'updatePengajar'])->name('staff.pengajar.update');
+        Route::delete('staff/pengajar/{staff}', [StaffController::class, 'destroyPengajar'])->name('staff.pengajar.destroy');
+        Route::get('staff/pengajar/api/list', [StaffController::class, 'pengajarLookup'])->name('staff.pengajar.lookup');
+
+        Route::get('staff/non-pengajar', [StaffController::class, 'nonPengajarIndex'])->name('staff.non-pengajar.index');
+        Route::get('staff/non-pengajar/create', [StaffController::class, 'createNonPengajar'])->name('staff.non-pengajar.create');
+        Route::post('staff/non-pengajar', [StaffController::class, 'storeNonPengajar'])->name('staff.non-pengajar.store');
+        Route::get('staff/non-pengajar/{staff}/edit', [StaffController::class, 'editNonPengajar'])->name('staff.non-pengajar.edit');
+        Route::put('staff/non-pengajar/{staff}', [StaffController::class, 'updateNonPengajar'])->name('staff.non-pengajar.update');
+        Route::delete('staff/non-pengajar/{staff}', [StaffController::class, 'destroyNonPengajar'])->name('staff.non-pengajar.destroy');
 
         Route::get('communications', [AnnouncementController::class, 'index'])->name('communications.index');
         Route::post('communications', [AnnouncementController::class, 'store'])->name('communications.store');
@@ -63,6 +78,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
         Route::post('resources/facilities', [ResourceController::class, 'storeFacility'])->name('resources.facilities.store');
         Route::post('resources/bookings', [ResourceController::class, 'storeBooking'])->name('resources.bookings.store');
+
+        Route::get('data-ruangan/ruangan-belajar', [DataRuanganController::class, 'ruanganBelajarIndex'])->name('data-ruangan.ruangan-belajar.index');
+        Route::post('data-ruangan/ruangan-belajar', [DataRuanganController::class, 'storeRuanganBelajar'])->name('data-ruangan.ruangan-belajar.store');
+        Route::put('data-ruangan/ruangan-belajar/{facility}', [DataRuanganController::class, 'updateRuanganBelajar'])->name('data-ruangan.ruangan-belajar.update');
+        Route::delete('data-ruangan/ruangan-belajar/{facility}', [DataRuanganController::class, 'destroyRuanganBelajar'])->name('data-ruangan.ruangan-belajar.destroy');
+
+        Route::get('data-ruangan/fasilitas-sekolah', [DataRuanganController::class, 'fasilitasSekolahIndex'])->name('data-ruangan.fasilitas-sekolah.index');
+        Route::post('data-ruangan/fasilitas-sekolah', [DataRuanganController::class, 'storeFasilitasSekolah'])->name('data-ruangan.fasilitas-sekolah.store');
+        Route::put('data-ruangan/fasilitas-sekolah/{facility}', [DataRuanganController::class, 'updateFasilitasSekolah'])->name('data-ruangan.fasilitas-sekolah.update');
+        Route::delete('data-ruangan/fasilitas-sekolah/{facility}', [DataRuanganController::class, 'destroyFasilitasSekolah'])->name('data-ruangan.fasilitas-sekolah.destroy');
+
+        Route::get('data-ruangan/penggunaan-fasilitas', [DataRuanganController::class, 'penggunaanFasilitasIndex'])->name('data-ruangan.penggunaan-fasilitas.index');
+        Route::post('data-ruangan/penggunaan-fasilitas', [DataRuanganController::class, 'storePenggunaanFasilitas'])->name('data-ruangan.penggunaan-fasilitas.store');
+        Route::put('data-ruangan/penggunaan-fasilitas/{booking}', [DataRuanganController::class, 'updatePenggunaanFasilitas'])->name('data-ruangan.penggunaan-fasilitas.update');
+        Route::delete('data-ruangan/penggunaan-fasilitas/{booking}', [DataRuanganController::class, 'destroyPenggunaanFasilitas'])->name('data-ruangan.penggunaan-fasilitas.destroy');
     });
 
     Route::middleware('role:admin,teacher')->group(function () {
@@ -75,6 +105,33 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance/scan', [AttendanceController::class, 'scan'])->name('attendance.scan');
+
+        Route::get('data-ruangan/rombongan-belajar', [DataRuanganController::class, 'rombonganBelajarIndex'])->name('data-ruangan.rombongan-belajar.index');
+        Route::post('data-ruangan/rombongan-belajar', [DataRuanganController::class, 'storeRombonganBelajar'])->name('data-ruangan.rombongan-belajar.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}', [DataRuanganController::class, 'updateRombonganBelajar'])->name('data-ruangan.rombongan-belajar.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}', [DataRuanganController::class, 'destroyRombonganBelajar'])->name('data-ruangan.rombongan-belajar.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/teachers', [DataRuanganController::class, 'storeTeacherAssignment'])->name('data-ruangan.rombongan-belajar.teachers.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}/teachers/{assignment}', [DataRuanganController::class, 'updateTeacherAssignment'])->name('data-ruangan.rombongan-belajar.teachers.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/teachers/{assignment}', [DataRuanganController::class, 'destroyTeacherAssignment'])->name('data-ruangan.rombongan-belajar.teachers.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/schedules', [DataRuanganController::class, 'storeSchedule'])->name('data-ruangan.rombongan-belajar.schedules.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}/schedules/{schedule}', [DataRuanganController::class, 'updateSchedule'])->name('data-ruangan.rombongan-belajar.schedules.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/schedules/{schedule}', [DataRuanganController::class, 'destroySchedule'])->name('data-ruangan.rombongan-belajar.schedules.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/daily-journals', [DataRuanganController::class, 'storeDailyJournal'])->name('data-ruangan.rombongan-belajar.daily-journals.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}/daily-journals/{journal}', [DataRuanganController::class, 'updateDailyJournal'])->name('data-ruangan.rombongan-belajar.daily-journals.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/daily-journals/{journal}', [DataRuanganController::class, 'destroyDailyJournal'])->name('data-ruangan.rombongan-belajar.daily-journals.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/tasks', [DataRuanganController::class, 'storeTask'])->name('data-ruangan.rombongan-belajar.tasks.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}/tasks/{task}', [DataRuanganController::class, 'updateTask'])->name('data-ruangan.rombongan-belajar.tasks.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/tasks/{task}', [DataRuanganController::class, 'destroyTask'])->name('data-ruangan.rombongan-belajar.tasks.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/indicators', [DataRuanganController::class, 'storeIndicator'])->name('data-ruangan.rombongan-belajar.indicators.store');
+        Route::put('data-ruangan/rombongan-belajar/{schoolClass}/indicators/{indicator}', [DataRuanganController::class, 'updateIndicator'])->name('data-ruangan.rombongan-belajar.indicators.update');
+        Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/indicators/{indicator}', [DataRuanganController::class, 'destroyIndicator'])->name('data-ruangan.rombongan-belajar.indicators.destroy');
+
+        Route::post('data-ruangan/rombongan-belajar/{schoolClass}/assessments', [DataRuanganController::class, 'storeAssessment'])->name('data-ruangan.rombongan-belajar.assessments.store');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/students.csv', [ReportController::class, 'studentsCsv'])->name('reports.students.csv');

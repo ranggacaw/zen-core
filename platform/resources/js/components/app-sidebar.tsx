@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpenCheck, BriefcaseBusiness, FileOutput, LayoutGrid, Megaphone, ShieldCheck, Users, WalletCards } from 'lucide-react';
+import { BookOpenCheck, BriefcaseBusiness, FileOutput, LayoutGrid, Megaphone, School, ShieldCheck, Users, WalletCards } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const footerNavItems: NavItem[] = [
@@ -43,8 +43,28 @@ export function AppSidebar() {
                           { title: 'Admissions', url: '/peserta-ppdb' },
                       ]
                   },
-                  { title: 'Staff', url: '/staff', icon: ShieldCheck },
-                  { title: 'Classes', url: '/classes', icon: BookOpenCheck },
+                  {
+                      title: 'Staff',
+                      url: '#',
+                      icon: ShieldCheck,
+                      isActive: page.url.startsWith('/staff'),
+                      items: [
+                          { title: 'Pengajar', url: '/staff/pengajar' },
+                          { title: 'Non-Pengajar', url: '/staff/non-pengajar' },
+                      ],
+                  },
+                  {
+                      title: 'Data Ruangan',
+                      url: '#',
+                      icon: School,
+                      isActive: page.url.startsWith('/data-ruangan'),
+                      items: [
+                          { title: 'Rombongan Belajar', url: '/data-ruangan/rombongan-belajar' },
+                          { title: 'Ruangan Belajar', url: '/data-ruangan/ruangan-belajar' },
+                          { title: 'Fasilitas Sekolah', url: '/data-ruangan/fasilitas-sekolah' },
+                          { title: 'Penggunaan Fasilitas', url: '/data-ruangan/penggunaan-fasilitas' },
+                      ],
+                  },
                   { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
                   { title: 'Communications', url: '/communications', icon: Megaphone },
                   { title: 'Rooms', url: '/resources', icon: WalletCards },
@@ -53,7 +73,13 @@ export function AppSidebar() {
             : []),
         ...(role === 'teacher'
             ? [
-                  { title: 'Classes', url: '/classes', icon: BookOpenCheck },
+                  {
+                      title: 'Data Ruangan',
+                      url: '#',
+                      icon: School,
+                      isActive: page.url.startsWith('/data-ruangan') || page.url.startsWith('/classes'),
+                      items: [{ title: 'Rombongan Belajar', url: '/data-ruangan/rombongan-belajar' }],
+                  },
                   { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
                   { title: 'Reports', url: '/reports', icon: FileOutput },
               ]

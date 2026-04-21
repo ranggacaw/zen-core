@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Domain\AcademicOperations\Models\AcademicIndicator;
+use App\Domain\AcademicOperations\Models\ClassDailyJournal;
+use App\Domain\AcademicOperations\Models\ClassSchedule;
+use App\Domain\AcademicOperations\Models\ClassTask;
 use App\Domain\AcademicOperations\Models\ClassTeacherAssignment;
 use App\Domain\AcademicOperations\Models\SchoolClass;
 use App\Domain\BusinessResources\Models\Facility;
@@ -828,6 +831,202 @@ class PlatformFlowsTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'dina.staff@example.com']);
     }
 
+    public function test_admin_can_manage_pengajar_records_from_staff_module(): void
+    {
+        Storage::fake(config('zen.upload_disk'));
+
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $class = SchoolClass::query()->create([
+            'name' => 'Kelas Guru',
+            'grade_level' => 'Grade 5',
+            'academic_year' => '2025/2026',
+            'room_name' => 'Melur',
+        ]);
+        $indicator = AcademicIndicator::query()->create([
+            'school_class_id' => $class->id,
+            'subject_name' => 'Mathematics',
+            'semester' => 'Semester 1',
+            'code' => 'MTH-10',
+            'name' => 'Numbers and operations',
+            'status' => 'complete',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('staff.pengajar.store'), [
+                'name' => 'Rina Putri',
+                'email' => 'rina.pengajar@example.com',
+                'role' => UserRole::Teacher->value,
+                'position' => 'Mathematics Teacher',
+                'employee_number' => 'PGJ-1001',
+                'employment_status' => 'active',
+                'avatar' => UploadedFile::fake()->image('rina.png'),
+                'nik' => '3171002001900001',
+                'education' => 'S.Pd',
+                'specialization_subjects' => [$indicator->id],
+                'phone' => '081234567890',
+                'gender' => 'P',
+                'birth_place' => 'Surabaya',
+                'birth_date' => '1990-01-20',
+                'nip' => '198901012020011001',
+                'religion' => 'islam',
+                'bank_name' => 'Bank Syariah Indonesia',
+                'bank_account' => '1234567890',
+                'join_date' => '2024-07-01',
+                'end_date' => '2026-06-30',
+                'decree_permanent' => 'SK-PT-001',
+                'decree_contract' => 'SK-KT-001',
+                'address_line' => 'Jl. Kenanga 10',
+                'province_code' => '31',
+                'regency_code' => '3171',
+                'district_code' => '3171020',
+                'village_code' => '3171020001',
+                'postal_code' => '12190',
+                'create_user_account' => true,
+            ])
+            ->assertRedirect(route('staff.pengajar.index'));
+
+        $staff = Staff::query()->where('employee_number', 'PGJ-1001')->firstOrFail()->refresh();
+
+        $this->assertSame(Staff::TYPE_PENGAJAR, $staff->resolvedType());
+        $this->assertSame([$indicator->id], $staff->specialization_subjects);
+        $this->assertNotNull($staff->avatar);
+        Storage::disk(config('zen.upload_disk'))->assertExists($staff->avatar);
+
+        $this->actingAs($admin)
+            ->getJson(route('staff.pengajar.lookup', ['q' => 'Rina']))
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Rina Putri']);
+
+        $this->actingAs($admin)
+            ->put(route('staff.pengajar.update', $staff), [
+                'name' => 'Rina Putri Sari',
+                'email' => 'rina.pengajar@example.com',
+                'role' => UserRole::Teacher->value,
+                'position' => 'Senior Mathematics Teacher',
+                'employee_number' => 'PGJ-1001',
+                'employment_status' => 'inactive',
+                'nik' => '3171002001900001',
+                'education' => 'M.Pd',
+                'specialization_subjects' => [$indicator->id],
+                'phone' => '081234567891',
+                'gender' => 'P',
+                'birth_place' => 'Surabaya',
+                'birth_date' => '1990-01-20',
+                'nip' => '198901012020011001',
+                'religion' => 'islam',
+                'bank_name' => 'Bank Mandiri',
+                'bank_account' => '1234567890',
+                'join_date' => '2024-07-01',
+                'end_date' => '2026-06-30',
+                'decree_permanent' => 'SK-PT-002',
+                'decree_contract' => 'SK-KT-002',
+                'address_line' => 'Jl. Kenanga 20',
+                'province_code' => '31',
+                'regency_code' => '3171',
+                'district_code' => '3171020',
+                'village_code' => '3171020002',
+                'postal_code' => '12191',
+                'create_user_account' => true,
+            ])
+            ->assertRedirect(route('staff.pengajar.index'));
+
+        $staff->refresh();
+
+        $this->assertDatabaseHas('staff', [
+            'id' => $staff->id,
+            'name' => 'Rina Putri Sari',
+            'staff_type' => Staff::TYPE_PENGAJAR,
+            'employment_status' => 'inactive',
+            'bank_name' => 'Bank Mandiri',
+            'postal_code' => '12191',
+        ]);
+        $this->assertSame([$indicator->id], $staff->specialization_subjects);
+
+        $this->actingAs($admin)
+            ->delete(route('staff.pengajar.destroy', $staff))
+            ->assertRedirect(route('staff.pengajar.index'));
+
+        $this->assertDatabaseMissing('staff', ['id' => $staff->id]);
+        Storage::disk(config('zen.upload_disk'))->assertMissing($staff->avatar);
+    }
+
+    public function test_admin_can_manage_non_pengajar_records_from_staff_module(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+        $this->actingAs($admin)
+            ->post(route('staff.non-pengajar.store'), [
+                'name' => 'Bagus Santoso',
+                'email' => 'bagus.staff@example.com',
+                'role' => UserRole::Admin->value,
+                'position' => 'Finance Officer',
+                'employee_number' => 'NPG-2001',
+                'employment_status' => 'active',
+                'nik' => '3578001011990002',
+                'education' => 'S.Ak',
+                'phone' => '081298765432',
+                'gender' => 'L',
+                'birth_place' => 'Malang',
+                'birth_date' => '1991-02-10',
+                'religion' => 'kristen',
+                'bank_name' => 'BCA',
+                'bank_account' => '99887766',
+                'join_date' => '2025-01-01',
+                'address_line' => 'Jl. Mawar 12',
+                'province_code' => '35',
+                'regency_code' => '3578',
+                'district_code' => '3578090',
+                'village_code' => '3578090001',
+                'postal_code' => '60241',
+                'create_user_account' => false,
+            ])
+            ->assertRedirect(route('staff.non-pengajar.index'));
+
+        $staff = Staff::query()->where('employee_number', 'NPG-2001')->firstOrFail();
+
+        $this->assertSame(Staff::TYPE_NON_PENGAJAR, $staff->resolvedType());
+
+        $this->actingAs($admin)
+            ->put(route('staff.non-pengajar.update', $staff), [
+                'name' => 'Bagus Santoso',
+                'email' => 'bagus.staff@example.com',
+                'role' => UserRole::Admin->value,
+                'position' => 'Operations Officer',
+                'employee_number' => 'NPG-2001',
+                'employment_status' => 'active',
+                'nik' => '3578001011990002',
+                'education' => 'S.Ak',
+                'phone' => '081298765433',
+                'gender' => 'L',
+                'birth_place' => 'Malang',
+                'birth_date' => '1991-02-10',
+                'religion' => 'kristen',
+                'bank_name' => 'BCA',
+                'bank_account' => '99887766',
+                'join_date' => '2025-01-01',
+                'address_line' => 'Jl. Mawar 15',
+                'province_code' => '35',
+                'regency_code' => '3578',
+                'district_code' => '3578090',
+                'village_code' => '3578090002',
+                'postal_code' => '60242',
+                'create_user_account' => true,
+            ])
+            ->assertRedirect(route('staff.non-pengajar.index'));
+
+        $this->assertDatabaseHas('staff', [
+            'id' => $staff->id,
+            'position' => 'Operations Officer',
+            'staff_type' => Staff::TYPE_NON_PENGAJAR,
+            'postal_code' => '60242',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'bagus.staff@example.com',
+            'role' => UserRole::Admin->value,
+        ]);
+    }
+
     public function test_admin_can_create_a_room_booking_for_a_staff_requester(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Admin]);
@@ -899,6 +1098,261 @@ class PlatformFlowsTest extends TestCase
                 'ends_at' => '2026-05-01 13:00:00',
             ])
             ->assertRedirect(route('resources.index'))
+            ->assertSessionHasErrors('facility_id');
+
+        $this->assertSame(1, RoomBooking::query()->count());
+    }
+
+    public function test_admin_can_manage_data_ruangan_master_data_routes(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.ruangan-belajar.store'), [
+                'name' => 'Ruang Mawar',
+                'location' => 'Gedung A',
+                'status' => 'available',
+            ])
+            ->assertRedirect();
+
+        $room = Facility::query()->where('name', 'Ruang Mawar')->firstOrFail();
+
+        $this->assertSame(Facility::TYPE_ROOM, $room->type);
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.fasilitas-sekolah.store'), [
+                'name' => 'Perpustakaan',
+                'location' => 'Gedung B',
+                'status' => 'available',
+            ])
+            ->assertRedirect();
+
+        $facility = Facility::query()->where('name', 'Perpustakaan')->firstOrFail();
+
+        $this->assertSame(Facility::TYPE_FACILITY, $facility->type);
+
+        $this->actingAs($admin)
+            ->put(route('data-ruangan.ruangan-belajar.update', $room), [
+                'name' => 'Ruang Melati',
+                'location' => 'Gedung C',
+                'status' => 'maintenance',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('facilities', [
+            'id' => $room->id,
+            'name' => 'Ruang Melati',
+            'type' => Facility::TYPE_ROOM,
+            'status' => 'maintenance',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('data-ruangan.fasilitas-sekolah.destroy', $facility))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('facilities', [
+            'id' => $facility->id,
+        ]);
+    }
+
+    public function test_admin_can_manage_rombongan_belajar_workspace_from_data_ruangan_routes(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $teacherUser = User::factory()->create(['role' => UserRole::Teacher, 'email' => 'ruangan-teacher@example.com']);
+        $teacher = Staff::query()->create([
+            'user_id' => $teacherUser->id,
+            'name' => 'Dewi Purnama',
+            'email' => $teacherUser->email,
+            'role' => UserRole::Teacher->value,
+            'position' => 'Homeroom Teacher',
+            'employee_number' => 'DR-001',
+        ]);
+        $room = Facility::query()->create([
+            'name' => 'Ruang Cendana',
+            'location' => 'Lantai 2',
+            'type' => Facility::TYPE_ROOM,
+            'status' => 'available',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.store'), [
+                'name' => 'Rombel 4A',
+                'grade_level' => 'Grade 4',
+                'academic_year' => '2025/2026',
+                'room_id' => $room->id,
+                'homeroom_teacher_id' => $teacher->id,
+            ])
+            ->assertRedirect();
+
+        $schoolClass = SchoolClass::query()->where('name', 'Rombel 4A')->firstOrFail();
+        $assignment = ClassTeacherAssignment::query()->where('school_class_id', $schoolClass->id)->where('staff_id', $teacher->id)->firstOrFail();
+
+        $student = Student::query()->create([
+            'school_class_id' => $schoolClass->id,
+            'name' => 'Nadia Fitria',
+            'student_number' => 'DR-ST-01',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.schedules.store', $schoolClass), [
+                'class_teacher_assignment_id' => $assignment->id,
+                'semester' => 'Semester 1',
+                'day_of_week' => 'Monday',
+                'starts_at' => '07:30',
+                'ends_at' => '09:00',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.daily-journals.store', $schoolClass), [
+                'entry_date' => '2026-05-01',
+                'content' => 'Pembukaan kelas dan refleksi literasi.',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.tasks.store', $schoolClass), [
+                'class_teacher_assignment_id' => $assignment->id,
+                'title' => 'Ringkasan bacaan',
+                'description' => 'Kerjakan ringkasan satu halaman.',
+                'due_on' => '2026-05-03',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.indicators.store', $schoolClass), [
+                'subject_name' => 'Bahasa Indonesia',
+                'semester' => 'Semester 1',
+                'code' => 'BI-44',
+                'name' => 'Membaca intensif',
+                'status' => 'active',
+            ])
+            ->assertRedirect();
+
+        $indicator = AcademicIndicator::query()->where('school_class_id', $schoolClass->id)->where('code', 'BI-44')->firstOrFail();
+        $schedule = ClassSchedule::query()->where('school_class_id', $schoolClass->id)->firstOrFail();
+        $journal = ClassDailyJournal::query()->where('school_class_id', $schoolClass->id)->firstOrFail();
+        $task = ClassTask::query()->where('school_class_id', $schoolClass->id)->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('data-ruangan.rombongan-belajar.assessments.store', $schoolClass), [
+                'student_id' => $student->id,
+                'academic_indicator_id' => $indicator->id,
+                'score' => 91,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->put(route('data-ruangan.rombongan-belajar.schedules.update', [$schoolClass, $schedule]), [
+                'class_teacher_assignment_id' => $assignment->id,
+                'semester' => 'Semester 2',
+                'day_of_week' => 'Tuesday',
+                'starts_at' => '08:00',
+                'ends_at' => '09:30',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->put(route('data-ruangan.rombongan-belajar.daily-journals.update', [$schoolClass, $journal]), [
+                'entry_date' => '2026-05-02',
+                'content' => 'Diskusi kelompok dan presentasi.',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->put(route('data-ruangan.rombongan-belajar.tasks.update', [$schoolClass, $task]), [
+                'class_teacher_assignment_id' => $assignment->id,
+                'title' => 'Ringkasan bacaan revisi',
+                'description' => 'Lengkapi dengan kesimpulan pribadi.',
+                'due_on' => '2026-05-04',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->put(route('data-ruangan.rombongan-belajar.indicators.update', [$schoolClass, $indicator]), [
+                'subject_name' => 'Bahasa Indonesia',
+                'semester' => 'Semester 2',
+                'code' => 'BI-44',
+                'name' => 'Membaca kritis',
+                'status' => 'inactive',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->get(route('data-ruangan.rombongan-belajar.index', ['class' => $schoolClass->id]))
+            ->assertOk()
+            ->assertSee('Rombel 4A')
+            ->assertSee('Membaca kritis');
+
+        $this->assertDatabaseHas('school_classes', [
+            'id' => $schoolClass->id,
+            'room_name' => 'Ruang Cendana',
+        ]);
+        $this->assertDatabaseHas('class_schedules', [
+            'id' => $schedule->id,
+            'school_class_id' => $schoolClass->id,
+            'semester' => 'Semester 2',
+            'day_of_week' => 'Tuesday',
+            'class_teacher_assignment_id' => $assignment->id,
+        ]);
+        $this->assertDatabaseHas('class_daily_journals', [
+            'id' => $journal->id,
+            'entry_date' => '2026-05-02 00:00:00',
+        ]);
+        $this->assertDatabaseHas('class_tasks', [
+            'id' => $task->id,
+            'title' => 'Ringkasan bacaan revisi',
+            'class_teacher_assignment_id' => $assignment->id,
+        ]);
+        $this->assertDatabaseHas('academic_indicators', [
+            'id' => $indicator->id,
+            'name' => 'Membaca kritis',
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseHas('assessment_entries', [
+            'school_class_id' => $schoolClass->id,
+            'student_id' => $student->id,
+            'academic_indicator_id' => $indicator->id,
+            'score' => 91,
+        ]);
+    }
+
+    public function test_penggunaan_fasilitas_route_rejects_overlapping_booking_for_same_facility(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+        $facility = Facility::query()->create([
+            'name' => 'Aula Serbaguna',
+            'location' => 'Gedung Utama',
+            'type' => Facility::TYPE_FACILITY,
+            'status' => 'available',
+        ]);
+        $student = Student::query()->create([
+            'name' => 'Rafi Pratama',
+            'student_number' => 'DR-ST-02',
+            'status' => 'active',
+        ]);
+
+        RoomBooking::query()->create([
+            'facility_id' => $facility->id,
+            'student_id' => $student->id,
+            'purpose' => 'Latihan paduan suara',
+            'starts_at' => '2026-05-10 09:00:00',
+            'ends_at' => '2026-05-10 11:00:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('data-ruangan.penggunaan-fasilitas.index'))
+            ->post(route('data-ruangan.penggunaan-fasilitas.store'), [
+                'facility_id' => $facility->id,
+                'requester_type' => 'murid',
+                'student_id' => $student->id,
+                'purpose' => 'Latihan teater',
+                'starts_at' => '2026-05-10 10:30:00',
+                'ends_at' => '2026-05-10 12:00:00',
+            ])
+            ->assertRedirect(route('data-ruangan.penggunaan-fasilitas.index'))
             ->assertSessionHasErrors('facility_id');
 
         $this->assertSame(1, RoomBooking::query()->count());

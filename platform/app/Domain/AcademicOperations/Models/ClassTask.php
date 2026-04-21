@@ -2,25 +2,28 @@
 
 namespace App\Domain\AcademicOperations\Models;
 
-use App\Domain\WorkforceAccess\Models\Staff;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClassSchedule extends Model
+class ClassTask extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'school_class_id',
         'class_teacher_assignment_id',
-        'staff_id',
-        'day_of_week',
-        'subject_name',
-        'semester',
-        'starts_at',
-        'ends_at',
+        'title',
+        'description',
+        'due_on',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'due_on' => 'date',
+        ];
+    }
 
     public function schoolClass(): BelongsTo
     {
@@ -30,10 +33,5 @@ class ClassSchedule extends Model
     public function teacherAssignment(): BelongsTo
     {
         return $this->belongsTo(ClassTeacherAssignment::class);
-    }
-
-    public function staff(): BelongsTo
-    {
-        return $this->belongsTo(Staff::class);
     }
 }
