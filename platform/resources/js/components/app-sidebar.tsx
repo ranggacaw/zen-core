@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpenCheck, BriefcaseBusiness, ClipboardCheck, FileOutput, GraduationCap, LayoutGrid, Megaphone, ShieldCheck, Users, WalletCards } from 'lucide-react';
+import { BookOpenCheck, BriefcaseBusiness, FileOutput, LayoutGrid, Megaphone, ShieldCheck, Users, WalletCards } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const footerNavItems: NavItem[] = [
@@ -33,21 +33,21 @@ export function AppSidebar() {
         ...(role === 'admin'
             ? [
                   { 
-                      title: 'Data Peserta', 
+                      title: 'People records', 
                       url: '#', 
                       icon: Users,
                       isActive: page.url.startsWith('/peserta-'),
                       items: [
-                          { title: 'Peserta Didik', url: '/peserta-murid' },
-                          { title: 'Wali Murid', url: '/peserta-wali' },
-                          { title: 'PPDB', url: '/peserta-ppdb' },
+                          { title: 'Students', url: '/peserta-murid' },
+                          { title: 'Guardians', url: '/peserta-wali' },
+                          { title: 'Admissions', url: '/peserta-ppdb' },
                       ]
                   },
                   { title: 'Staff', url: '/staff', icon: ShieldCheck },
                   { title: 'Classes', url: '/classes', icon: BookOpenCheck },
                   { title: 'Attendance', url: '/attendance', icon: LayoutGrid },
                   { title: 'Communications', url: '/communications', icon: Megaphone },
-                  { title: 'Resources', url: '/resources', icon: WalletCards },
+                  { title: 'Rooms', url: '/resources', icon: WalletCards },
                   { title: 'Reports', url: '/reports', icon: FileOutput },
               ]
             : []),
@@ -58,7 +58,7 @@ export function AppSidebar() {
                   { title: 'Reports', url: '/reports', icon: FileOutput },
               ]
             : []),
-        ...(role === 'registered_user' ? [{ title: 'Workspace', url: '/dashboard', icon: BriefcaseBusiness }] : []),
+        ...(role === 'registered_user' ? [{ title: 'Family workspace', url: '/dashboard', icon: BriefcaseBusiness }] : []),
     ];
 
     return (

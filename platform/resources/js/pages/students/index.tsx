@@ -1,4 +1,4 @@
-import { type AddressOptions } from '@/components/platform/address-fields';
+import { PageHeader } from '@/components/platform/page-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,25 +6,51 @@ import { NativeSelect } from '@/components/ui/native-select';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Download, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { StudentFormDialog, type StudentRecord } from './components/student-form-dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Peserta Didik', href: '/peserta-murid' },
+    { title: 'Students', href: '/peserta-murid' },
 ];
+
+interface StudentRecord {
+    id: number;
+    name: string;
+    nickname?: string;
+    student_number: string;
+    religion?: string;
+    phone?: string;
+    email?: string;
+    birth_place?: string;
+    birth_date?: string;
+    gender?: string;
+    child_number?: string;
+    child_of_total?: string;
+    citizenship?: string;
+    join_date?: string;
+    end_date?: string;
+    postal_code?: string;
+    domicile_address?: string;
+    status: string;
+    guardian_id: number | null;
+    school_class_id: number | null;
+    guardian: string | null;
+    relationship: string | null;
+    class: string | null;
+    address_line: string | null;
+    province_code: string | null;
+    regency_code: string | null;
+    district_code: string | null;
+    village_code: string | null;
+    updated_at: string;
+}
 
 interface StudentIndexProps {
     students: StudentRecord[];
-    guardians: Array<{ id: number; name: string; relationship: string }>;
-    classes: Array<{ id: number; name: string }>;
-    addressOptions: AddressOptions;
 }
 
-export default function StudentIndex({ students, guardians, classes, addressOptions }: StudentIndexProps) {
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [editingStudent, setEditingStudent] = useState<StudentRecord | null>(null);
+export default function StudentIndex({ students }: StudentIndexProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [entriesPerPage, setEntriesPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
@@ -63,22 +89,20 @@ export default function StudentIndex({ students, guardians, classes, addressOpti
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Peserta Didik" />
+            <Head title="Students" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
-                {/* Advanced Filter Section */}
-                <div className="flex justify-end gap-2 items-center">
-                    <Button variant="outline" size="icon" className="h-10 w-10 text-muted-foreground border-border/50 shadow-none">
-                        <Settings2 className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={() => setIsCreateModalOpen(true)} className="h-10 gap-2 bg-indigo-500 hover:bg-indigo-600 shadow-sm text-white">
-                        <Plus className="h-4 w-4" /> New Data
-                    </Button>
-                </div>
+                <PageHeader
+                    title="Student records"
+                    description="Maintain active student profiles, guardian links, class placement, and core contact details for the clone workflow."
+                    actions={
+                        <Button onClick={() => router.get(route('students.create'))} className="h-10 gap-2 bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm">
+                            <Plus className="h-4 w-4" /> Add student
+                        </Button>
+                    }
+                />
 
-                {/* Data Table Section */}
                 <Card className="flex flex-col border-none shadow-sm ring-1 ring-border/50 overflow-hidden">
-                    {/* Table Toolbar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 gap-4 bg-background">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>Show</span>
@@ -120,7 +144,6 @@ export default function StudentIndex({ students, guardians, classes, addressOpti
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div className="overflow-x-auto w-full">
                         <table className="w-full text-sm text-left whitespace-nowrap">
                             <thead className="bg-muted/30 border-y border-border/50 text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">
@@ -172,7 +195,7 @@ export default function StudentIndex({ students, guardians, classes, addressOpti
                                                         variant="ghost" 
                                                         size="icon" 
                                                         className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                                        onClick={() => setEditingStudent(student)}
+                                                        onClick={() => router.get(route('students.edit', student.id))}
                                                         title="Edit Data"
                                                     >
                                                         <Pencil className="h-4 w-4" />
@@ -199,7 +222,6 @@ export default function StudentIndex({ students, guardians, classes, addressOpti
                         </table>
                     </div>
                     
-                    {/* Pagination Context & Controls */}
                     {totalPages > 0 && (
                         <div className="flex flex-col sm:flex-row items-center justify-between p-5 gap-4 bg-background">
                             <p className="text-sm text-muted-foreground w-full sm:w-auto text-center sm:text-left">
@@ -260,21 +282,6 @@ export default function StudentIndex({ students, guardians, classes, addressOpti
                     )}
                 </Card>
             </div>
-
-            {/* Student Form Modal (Create / Edit) */}
-            {(isCreateModalOpen || editingStudent) && (
-                <StudentFormDialog
-                    isOpen={isCreateModalOpen || !!editingStudent}
-                    onClose={() => {
-                        setIsCreateModalOpen(false);
-                        setEditingStudent(null);
-                    }}
-                    student={editingStudent}
-                    guardians={guardians}
-                    classes={classes}
-                    addressOptions={addressOptions}
-                />
-            )}
         </AppLayout>
     );
 }

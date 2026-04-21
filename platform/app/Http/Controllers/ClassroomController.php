@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Domain\AcademicOperations\Models\AcademicIndicator;
 use App\Domain\AcademicOperations\Models\AssessmentEntry;
 use App\Domain\AcademicOperations\Models\ClassSchedule;
-use App\Domain\AcademicOperations\Models\ClassTask;
 use App\Domain\AcademicOperations\Models\ClassTeacherAssignment;
 use App\Domain\AcademicOperations\Models\SchoolClass;
 use App\Domain\WorkforceAccess\Models\Staff;
 use App\Enums\UserRole;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,9 +35,9 @@ class ClassroomController extends Controller
             'students',
             'teachers.staff',
             'schedules.staff',
-            'tasks',
             'indicators',
             'assessments.student',
+            'assessments.indicator',
         ]);
 
         return Inertia::render('classes/index', [
@@ -69,12 +69,6 @@ class ClassroomController extends Controller
                     'time' => "{$schedule->starts_at}-{$schedule->ends_at}",
                     'teacher' => $schedule->staff?->name,
                 ]),
-                'tasks' => $selectedClass->tasks->map(fn (ClassTask $task) => [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'due_on' => optional($task->due_on)?->toDateString(),
-                ]),
                 'indicators' => $selectedClass->indicators->map(fn (AcademicIndicator $indicator) => [
                     'id' => $indicator->id,
                     'code' => $indicator->code,
@@ -86,12 +80,13 @@ class ClassroomController extends Controller
                 'assessments' => $selectedClass->assessments->map(fn (AssessmentEntry $assessment) => [
                     'id' => $assessment->id,
                     'student' => $assessment->student?->name,
+                    'indicator' => $assessment->indicator?->code,
                     'subject_name' => $assessment->subject_name,
                     'semester' => $assessment->semester,
                     'score' => $assessment->score,
                 ]),
             ] : null,
-            'staff' => Staff::query()->orderBy('name')->get(['id', 'name', 'role']),
+            'staff' => Staff::query()->where('role', UserRole::Teacher->value)->orderBy('name')->get(['id', 'name', 'role']),
         ]);
     }
 
@@ -112,7 +107,11 @@ class ClassroomController extends Controller
     public function assignTeacher(Request $request, SchoolClass $schoolClass): RedirectResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['required', 'integer', 'exists:staff,id'],
+            'staff_id' => [
+                'required',
+                'integer',
+                Rule::exists('staff', 'id')->where('role', UserRole::Teacher->value),
+            ],
             'subject_name' => ['nullable', 'string', 'max:255'],
             'is_homeroom' => ['nullable', 'boolean'],
         ]);
@@ -130,7 +129,11 @@ class ClassroomController extends Controller
     public function storeSchedule(Request $request, SchoolClass $schoolClass): RedirectResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['nullable', 'integer', 'exists:staff,id'],
+            'staff_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('staff', 'id')->where('role', UserRole::Teacher->value),
+            ],
             'day_of_week' => ['required', 'string', 'max:20'],
             'subject_name' => ['required', 'string', 'max:255'],
             'starts_at' => ['required', 'date_format:H:i'],
@@ -140,19 +143,6 @@ class ClassroomController extends Controller
         $schoolClass->schedules()->create($validated);
 
         return back()->with('success', 'Schedule added.');
-    }
-
-    public function storeTask(Request $request, SchoolClass $schoolClass): RedirectResponse
-    {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'due_on' => ['nullable', 'date'],
-        ]);
-
-        $schoolClass->tasks()->create($validated);
-
-        return back()->with('success', 'Class task added.');
     }
 
     public function storeIndicator(Request $request, SchoolClass $schoolClass): RedirectResponse
@@ -173,15 +163,22 @@ class ClassroomController extends Controller
     public function storeAssessment(Request $request, SchoolClass $schoolClass): RedirectResponse
     {
         $validated = $request->validate([
-            'student_id' => ['required', 'integer', 'exists:students,id'],
-            'academic_indicator_id' => ['nullable', 'integer', 'exists:academic_indicators,id'],
-            'subject_name' => ['required', 'string', 'max:255'],
-            'semester' => ['required', 'string', 'max:100'],
+            'student_id' => [
+                'required',
+                'integer',
+                Rule::exists('students', 'id')->where('school_class_id', $schoolClass->id),
+            ],
+            'academic_indicator_id' => [
+                'required',
+                'integer',
+                Rule::exists('academic_indicators', 'id')->where('school_class_id', $schoolClass->id),
+            ],
             'score' => ['required', 'numeric', 'between:0,100'],
         ]);
 
         $user = $request->user();
         $staff = $user?->staff;
+        $indicator = $schoolClass->indicators()->findOrFail($validated['academic_indicator_id']);
 
         if ($user?->hasRole(UserRole::Teacher)) {
             abort_unless($staff !== null, 403);
@@ -189,8 +186,8 @@ class ClassroomController extends Controller
             $allowed = ClassTeacherAssignment::query()
                 ->where('school_class_id', $schoolClass->id)
                 ->where('staff_id', $staff->id)
-                ->where(function ($query) use ($validated) {
-                    $query->where('subject_name', $validated['subject_name'])
+                ->where(function ($query) use ($indicator) {
+                    $query->where('subject_name', $indicator->subject_name)
                         ->orWhere('is_homeroom', true);
                 })
                 ->exists();
@@ -198,8 +195,13 @@ class ClassroomController extends Controller
             abort_unless($allowed, 403);
         }
 
-        $schoolClass->assessments()->create([
-            ...$validated,
+        $schoolClass->assessments()->updateOrCreate([
+            'student_id' => $validated['student_id'],
+            'academic_indicator_id' => $indicator->id,
+        ], [
+            'subject_name' => $indicator->subject_name,
+            'semester' => $indicator->semester,
+            'score' => $validated['score'],
             'staff_id' => $staff?->id,
         ]);
 

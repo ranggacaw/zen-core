@@ -144,9 +144,58 @@ class StudentController extends Controller
         return back()->with('success', 'Student record updated.');
     }
 
+    public function create(): Response
+    {
+        return Inertia::render('students/create', [
+            'guardians' => Guardian::query()->orderBy('name')->get(['id', 'name', 'relationship']),
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'addressOptions' => $this->addressOptions($this->addressReference),
+        ]);
+    }
+
+    public function edit(Student $student): Response
+    {
+        return Inertia::render('students/edit', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'nickname' => $student->nickname,
+                'student_number' => $student->student_number,
+                'religion' => $student->religion,
+                'phone' => $student->phone,
+                'email' => $student->email,
+                'birth_place' => $student->birth_place,
+                'birth_date' => $student->birth_date?->toDateString(),
+                'gender' => $student->gender,
+                'child_number' => $student->child_number,
+                'child_of_total' => $student->child_of_total,
+                'citizenship' => $student->citizenship,
+                'join_date' => $student->join_date?->toDateString(),
+                'end_date' => $student->end_date?->toDateString(),
+                'postal_code' => $student->postal_code,
+                'domicile_address' => $student->domicile_address,
+                'status' => $student->status,
+                'guardian_id' => $student->guardian_id,
+                'school_class_id' => $student->school_class_id,
+                'guardian' => $student->guardian?->name,
+                'relationship' => $student->guardian?->relationship,
+                'class' => $student->schoolClass?->name,
+                'address_line' => $student->address_line,
+                'province_code' => $student->province_code,
+                'regency_code' => $student->regency_code,
+                'district_code' => $student->district_code,
+                'village_code' => $student->village_code,
+                'updated_at' => $student->updated_at->toDateTimeString(),
+            ],
+            'guardians' => Guardian::query()->orderBy('name')->get(['id', 'name', 'relationship']),
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
+            'addressOptions' => $this->addressOptions($this->addressReference),
+        ]);
+    }
+
     public function destroy(Student $student): RedirectResponse
     {
-        if ($student->attendanceRecords()->exists() || $student->assessmentEntries()->exists() || $student->billingRecords()->exists()) {
+        if ($student->attendanceRecords()->exists() || $student->assessmentEntries()->exists()) {
             return back()->with('error', 'Student records with operational history cannot be deleted.');
         }
 

@@ -18,8 +18,6 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::post('webhooks/midtrans', [ResourceController::class, 'webhook'])->name('webhooks.midtrans');
-
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('address-reference', AddressReferenceController::class)->name('address-reference.index');
@@ -40,12 +38,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('peserta-ppdb/{applicant}/reject', [AdmissionsController::class, 'reject'])->name('ppdb.reject');
 
         Route::get('peserta-murid', [StudentController::class, 'index'])->name('students.index');
+        Route::get('peserta-murid/create', [StudentController::class, 'create'])->name('students.create');
         Route::post('peserta-murid', [StudentController::class, 'store'])->name('students.store');
+        Route::get('peserta-murid/{student}/edit', [StudentController::class, 'edit'])->name('students.edit');
         Route::put('peserta-murid/{student}', [StudentController::class, 'update'])->name('students.update');
         Route::delete('peserta-murid/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 
         Route::get('peserta-wali', [GuardianController::class, 'index'])->name('guardians.index');
+        Route::get('peserta-wali/create', [GuardianController::class, 'create'])->name('guardians.create');
         Route::post('peserta-wali', [GuardianController::class, 'store'])->name('guardians.store');
+        Route::get('peserta-wali/{guardian}/edit', [GuardianController::class, 'edit'])->name('guardians.edit');
         Route::put('peserta-wali/{guardian}', [GuardianController::class, 'update'])->name('guardians.update');
         Route::delete('peserta-wali/{guardian}', [GuardianController::class, 'destroy'])->name('guardians.destroy');
 
@@ -54,16 +56,13 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('communications', [AnnouncementController::class, 'index'])->name('communications.index');
         Route::post('communications', [AnnouncementController::class, 'store'])->name('communications.store');
+        Route::get('communications/{announcement}/document', [AnnouncementController::class, 'downloadDocument'])->name('communications.documents.download');
         Route::post('communications/{announcement}/approve', [AnnouncementController::class, 'approve'])->name('communications.approve');
         Route::post('communications/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('communications.publish');
 
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
-        Route::post('resources/billing', [ResourceController::class, 'storeBilling'])->name('resources.billing.store');
-        Route::post('resources/billing/{billing}/reconcile', [ResourceController::class, 'reconcileBilling'])->name('resources.billing.reconcile');
-        Route::post('resources/inventory', [ResourceController::class, 'storeInventory'])->name('resources.inventory.store');
         Route::post('resources/facilities', [ResourceController::class, 'storeFacility'])->name('resources.facilities.store');
-        Route::post('resources/events', [ResourceController::class, 'storeEvent'])->name('resources.events.store');
-        Route::post('resources/events/{event}/allocate', [ResourceController::class, 'allocateEvent'])->name('resources.events.allocate');
+        Route::post('resources/bookings', [ResourceController::class, 'storeBooking'])->name('resources.bookings.store');
     });
 
     Route::middleware('role:admin,teacher')->group(function () {
@@ -71,7 +70,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('classes', [ClassroomController::class, 'store'])->name('classes.store');
         Route::post('classes/{schoolClass}/teachers', [ClassroomController::class, 'assignTeacher'])->name('classes.teachers.store');
         Route::post('classes/{schoolClass}/schedules', [ClassroomController::class, 'storeSchedule'])->name('classes.schedules.store');
-        Route::post('classes/{schoolClass}/tasks', [ClassroomController::class, 'storeTask'])->name('classes.tasks.store');
         Route::post('classes/{schoolClass}/indicators', [ClassroomController::class, 'storeIndicator'])->name('classes.indicators.store');
         Route::post('classes/{schoolClass}/assessments', [ClassroomController::class, 'storeAssessment'])->name('classes.assessments.store');
 
@@ -81,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/students.csv', [ReportController::class, 'studentsCsv'])->name('reports.students.csv');
         Route::get('reports/attendance.csv', [ReportController::class, 'attendanceCsv'])->name('reports.attendance.csv');
+        Route::get('reports/classes/{schoolClass}/scores.csv', [ReportController::class, 'classScoresCsv'])->name('reports.classes.csv');
         Route::get('reports/classes/{schoolClass}/print', [ReportController::class, 'printClassReport'])->name('reports.classes.print');
     });
 });

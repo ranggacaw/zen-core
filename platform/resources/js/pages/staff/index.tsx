@@ -9,7 +9,7 @@ import { Head, useForm } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Staff', href: '/staff' },
+    { title: 'Staff and teachers', href: '/staff' },
 ];
 
 interface StaffProps {
@@ -21,6 +21,7 @@ interface StaffProps {
         position: string;
         employee_number: string;
         employment_status: string;
+        has_user_account: boolean;
     }>;
     roles: Array<{ value: string; label: string }>;
 }
@@ -33,19 +34,20 @@ export default function StaffIndex({ staff, roles }: StaffProps) {
         position: '',
         employee_number: '',
         bank_account: '',
+        create_user_account: true,
     });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Staff" />
+            <Head title="Staff and teachers" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader title="Workforce onboarding" description="Create teacher and staff records together with linked user accounts and role-based access." />
+                <PageHeader title="Staff and teacher onboarding" description="Create teacher and staff records, then optionally provision linked user accounts with role-based access." />
 
                 <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
                     <Card>
                         <CardHeader>
-                            <CardTitle>New staff member</CardTitle>
+                            <CardTitle>Add staff member</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <form
@@ -75,14 +77,22 @@ export default function StaffIndex({ staff, roles }: StaffProps) {
                                     onChange={(event) => form.setData('bank_account', event.target.value)}
                                     placeholder="Bank account (optional)"
                                 />
-                                <Button type="submit" className="w-full">Onboard staff member</Button>
+                                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.data.create_user_account}
+                                        onChange={(event) => form.setData('create_user_account', event.target.checked)}
+                                    />
+                                    Create linked login account with default password `password`
+                                </label>
+                                <Button type="submit" className="w-full">Create staff record</Button>
                             </form>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Provisioned workforce accounts</CardTitle>
+                            <CardTitle>Staff directory</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {staff.map((member) => (
@@ -98,6 +108,9 @@ export default function StaffIndex({ staff, roles }: StaffProps) {
                                             {member.role} • {member.employee_number} • {member.employment_status}
                                         </div>
                                     </div>
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        {member.has_user_account ? 'Linked login account ready' : 'No login account linked yet'}
+                                    </p>
                                 </div>
                             ))}
                         </CardContent>

@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\AcademicOperations\Models\ClassTeacherAssignment;
 use App\Domain\AcademicOperations\Models\SchoolClass;
-use App\Domain\BusinessResources\Models\BillingRecord;
+use App\Domain\BusinessResources\Models\RoomBooking;
 use App\Domain\CommunicationEngagement\Models\Announcement;
 use App\Domain\DailyOperations\Models\AttendanceRecord;
 use App\Domain\StudentLifecycle\Models\Applicant;
+use App\Domain\StudentLifecycle\Models\Guardian;
 use App\Domain\StudentLifecycle\Models\Student;
 use App\Domain\WorkforceAccess\Models\Staff;
+use App\Enums\UserRole;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -21,22 +23,125 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $role = $user?->role?->value ?? $user?->role;
+        $staff = $user?->staff;
         $query = trim((string) $request->string('q'));
+        $assignedClassIds = collect();
+        $linkedStudentIds = collect();
+        $linkedClassIds = collect();
+        $guardianWorkspace = null;
+        $guardianId = null;
 
-        $metrics = Cache::remember("dashboard:metrics:{$role}", now()->addMinutes(5), function () {
-            return [
+        if ($role === UserRole::RegisteredUser->value && $user) {
+            $guardian = Guardian::query()
+                ->with(['students.schoolClass:id,name', 'applicants.schoolClass:id,name'])
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($guardian) {
+                $guardianId = $guardian->id;
+                $linkedStudentIds = $guardian->students->pluck('id')->values();
+                $linkedClassIds = $guardian->students->pluck('school_class_id')->filter()->unique()->values();
+
+                $guardianWorkspace = [
+                    'name' => $guardian->name,
+                    'relationship' => $guardian->relationship,
+                    'phone' => $guardian->phone,
+                    'email' => $guardian->email,
+                    'students' => $guardian->students->map(fn (Student $student) => [
+                        'name' => $student->name,
+                        'student_number' => $student->student_number,
+                        'class' => $student->schoolClass?->name,
+                        'status' => $student->status,
+                    ])->values(),
+                    'applicants' => $guardian->applicants->map(fn (Applicant $applicant) => [
+                        'name' => $applicant->name,
+                        'student_number' => $applicant->student_number,
+                        'class' => $applicant->schoolClass?->name,
+                        'status' => $applicant->status,
+                        'decision_notes' => $applicant->decision_notes,
+                    ])->values(),
+                ];
+            }
+        }
+
+        if ($role === 'teacher' && $staff) {
+            $assignedClassIds = ClassTeacherAssignment::query()
+                ->where('staff_id', $staff->id)
+                ->pluck('school_class_id')
+                ->unique()
+                ->values();
+        }
+
+        $classReadinessQuery = SchoolClass::query()
+            ->withCount([
+                'indicators as incomplete_indicators_count' => fn ($query) => $query->where('status', '!=', 'complete'),
+            ]);
+
+        if ($role === 'teacher') {
+            $assignedClassIds->isNotEmpty()
+                ? $classReadinessQuery->whereIn('id', $assignedClassIds)
+                : $classReadinessQuery->whereRaw('1 = 0');
+        }
+
+        if ($role === UserRole::RegisteredUser->value) {
+            $classReadinessQuery->whereRaw('1 = 0');
+        }
+
+        $classReadiness = $classReadinessQuery
+            ->limit(5)
+            ->get()
+            ->map(fn (SchoolClass $schoolClass) => [
+                'name' => $schoolClass->name,
+                'academic_year' => $schoolClass->academic_year,
+                'incomplete_indicators' => $schoolClass->incomplete_indicators_count,
+            ]);
+
+        $metrics = $role === UserRole::RegisteredUser->value
+            ? [
+                'pendingApplicants' => $guardianId
+                    ? Applicant::query()->where('guardian_id', $guardianId)->where('status', 'pending')->count()
+                    : 0,
+                'activeStudents' => Student::query()->whereIn('id', $linkedStudentIds)->where('status', 'active')->count(),
+                'staffMembers' => 0,
+                'activeRoomBookings' => 0,
+                'publishedAnnouncements' => 0,
+                'assignedClasses' => $linkedClassIds->count(),
+                'incompleteIndicators' => 0,
+                'checkedInToday' => AttendanceRecord::query()
+                    ->whereDate('attendance_date', today())
+                    ->whereIn('student_id', $linkedStudentIds)
+                    ->whereNotNull('check_in_at')
+                    ->count(),
+            ]
+            : [
                 'pendingApplicants' => Applicant::query()->where('status', 'pending')->count(),
                 'activeStudents' => Student::query()->where('status', 'active')->count(),
                 'staffMembers' => Staff::query()->count(),
-                'pendingBilling' => BillingRecord::query()->where('status', 'pending')->count(),
+                'activeRoomBookings' => RoomBooking::query()->where('ends_at', '>=', now())->count(),
                 'publishedAnnouncements' => Announcement::query()->where('status', 'published')->count(),
+                'assignedClasses' => $assignedClassIds->count(),
+                'incompleteIndicators' => $classReadiness->sum('incomplete_indicators'),
+                'checkedInToday' => AttendanceRecord::query()->whereDate('attendance_date', today())->whereNotNull('check_in_at')->count(),
             ];
-        });
 
-        $recentAttendance = AttendanceRecord::query()
+        $recentAttendanceQuery = AttendanceRecord::query()
             ->with(['student', 'schoolClass'])
             ->latest('updated_at')
-            ->limit(6)
+            ->limit(6);
+
+        if ($role === 'teacher') {
+            $assignedClassIds->isNotEmpty()
+                ? $recentAttendanceQuery->whereIn('school_class_id', $assignedClassIds)
+                : $recentAttendanceQuery->whereRaw('1 = 0');
+        }
+
+        if ($role === UserRole::RegisteredUser->value) {
+            $linkedStudentIds->isNotEmpty()
+                ? $recentAttendanceQuery->whereIn('student_id', $linkedStudentIds)
+                : $recentAttendanceQuery->whereRaw('1 = 0');
+        }
+
+        $recentAttendance = $recentAttendanceQuery
             ->get()
             ->map(fn (AttendanceRecord $record) => [
                 'student' => $record->student?->name,
@@ -46,22 +151,24 @@ class DashboardController extends Controller
                 'time' => optional($record->check_out_at ?? $record->check_in_at)?->format('H:i'),
             ]);
 
-        $classReadiness = SchoolClass::query()
-            ->withCount([
-                'indicators as incomplete_indicators_count' => fn ($query) => $query->where('status', '!=', 'complete'),
-            ])
-            ->limit(5)
-            ->get()
-            ->map(fn (SchoolClass $schoolClass) => [
-                'name' => $schoolClass->name,
-                'academic_year' => $schoolClass->academic_year,
-                'incomplete_indicators' => $schoolClass->incomplete_indicators_count,
-            ]);
-
-        $publishedAnnouncements = Announcement::query()
+        $publishedAnnouncementsQuery = Announcement::query()
             ->with('classes:id,name')
             ->where('status', 'published')
-            ->latest('published_at')
+            ->latest('published_at');
+
+        if ($role === 'teacher') {
+            $assignedClassIds->isNotEmpty()
+                ? $publishedAnnouncementsQuery->whereHas('classes', fn ($query) => $query->whereIn('school_classes.id', $assignedClassIds))
+                : $publishedAnnouncementsQuery->whereRaw('1 = 0');
+        }
+
+        if ($role === UserRole::RegisteredUser->value) {
+            $linkedClassIds->isNotEmpty()
+                ? $publishedAnnouncementsQuery->whereHas('classes', fn ($query) => $query->whereIn('school_classes.id', $linkedClassIds))
+                : $publishedAnnouncementsQuery->whereRaw('1 = 0');
+        }
+
+        $publishedAnnouncements = $publishedAnnouncementsQuery
             ->limit($role === 'registered_user' ? 5 : 3)
             ->get()
             ->map(fn (Announcement $announcement) => [
@@ -73,10 +180,19 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'query' => $query,
+            'roleSummary' => [
+                'title' => $role === 'teacher' ? 'Teacher workspace' : ($role === 'registered_user' ? 'Guardian workspace' : 'Admin control center'),
+                'description' => $role === 'teacher'
+                    ? 'Follow your assigned classes, attendance activity, report-card readiness, and published announcements.'
+                    : ($role === 'registered_user'
+                        ? 'Review linked students, admissions progress, today\'s attendance, and class announcements for your family.'
+                        : 'Manage admissions, staffing, room usage, attendance, and communication from one operations dashboard.'),
+            ],
             'metrics' => $metrics,
             'recentAttendance' => $recentAttendance,
             'classReadiness' => $classReadiness,
             'announcements' => $publishedAnnouncements,
+            'guardianWorkspace' => $guardianWorkspace,
             'searchResults' => $query !== '' ? $this->search($query) : [],
         ]);
     }

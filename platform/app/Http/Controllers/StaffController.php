@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,8 +30,9 @@ class StaffController extends Controller
                     'position' => $staff->position,
                     'employee_number' => $staff->employee_number,
                     'employment_status' => $staff->employment_status,
+                    'has_user_account' => $staff->user_id !== null,
                 ]),
-            'roles' => collect(UserRole::cases())->map(fn (UserRole $role) => [
+            'roles' => collect([UserRole::Admin, UserRole::Teacher])->map(fn (UserRole $role) => [
                 'value' => $role->value,
                 'label' => $role->label(),
             ]),
@@ -41,24 +43,41 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email', 'unique:staff,email'],
-            'role' => ['required', 'in:'.implode(',', UserRole::values())],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                'unique:staff,email',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if ($request->boolean('create_user_account') && User::query()->where('email', $value)->exists()) {
+                        $fail('The email has already been taken.');
+                    }
+                },
+            ],
+            'role' => ['required', Rule::in([UserRole::Admin->value, UserRole::Teacher->value])],
             'position' => ['required', 'string', 'max:255'],
             'employee_number' => ['required', 'string', 'max:50', 'unique:staff,employee_number'],
             'bank_account' => ['nullable', 'string', 'max:100'],
+            'create_user_account' => ['nullable', 'boolean'],
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $user = User::query()->create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'role' => $validated['role'],
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
-            ]);
+        $createUserAccount = (bool) ($validated['create_user_account'] ?? false);
+
+        DB::transaction(function () use ($validated, $createUserAccount) {
+            $user = null;
+
+            if ($createUserAccount) {
+                $user = User::query()->create([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'role' => $validated['role'],
+                    'email_verified_at' => now(),
+                    'password' => Hash::make('password'),
+                ]);
+            }
 
             Staff::query()->create([
-                'user_id' => $user->id,
+                'user_id' => $user?->id,
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'role' => $validated['role'],
@@ -69,6 +88,8 @@ class StaffController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Staff member onboarded with linked system access.');
+        return back()->with('success', $createUserAccount
+            ? 'Staff member onboarded with linked system access.'
+            : 'Staff member onboarded without a login account.');
     }
 }

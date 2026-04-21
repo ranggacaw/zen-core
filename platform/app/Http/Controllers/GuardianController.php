@@ -117,6 +117,41 @@ class GuardianController extends Controller
         return back()->with('success', 'Guardian record updated.');
     }
 
+    public function create(): Response
+    {
+        return Inertia::render('guardians/create', [
+            'addressOptions' => $this->addressOptions($this->addressReference),
+            'students' => Student::select('id', 'name')->get(),
+        ]);
+    }
+
+    public function edit(Guardian $guardian): Response
+    {
+        return Inertia::render('guardians/edit', [
+            'guardian' => [
+                'id' => $guardian->id,
+                'name' => $guardian->name,
+                'relationship' => $guardian->relationship,
+                'phone' => $guardian->phone,
+                'email' => $guardian->email,
+                'address_line' => $guardian->address_line,
+                'province_code' => $guardian->province_code,
+                'regency_code' => $guardian->regency_code,
+                'district_code' => $guardian->district_code,
+                'village_code' => $guardian->village_code,
+                'birth_place' => $guardian->birth_place,
+                'birth_date' => $guardian->birth_date?->format('Y-m-d'),
+                'occupation' => $guardian->occupation,
+                'children_count' => $guardian->children_count,
+                'religion' => $guardian->religion,
+                'postal_code' => $guardian->postal_code,
+                'student_ids' => $guardian->students->pluck('id')->all(),
+            ],
+            'addressOptions' => $this->addressOptions($this->addressReference),
+            'students' => Student::select('id', 'name')->get(),
+        ]);
+    }
+
     public function destroy(Guardian $guardian): RedirectResponse
     {
         if ($guardian->students()->exists() || $guardian->applicants()->exists()) {

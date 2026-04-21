@@ -43,11 +43,6 @@ class SchoolClass extends Model
         return $this->hasMany(ClassSchedule::class);
     }
 
-    public function tasks(): HasMany
-    {
-        return $this->hasMany(ClassTask::class);
-    }
-
     public function indicators(): HasMany
     {
         return $this->hasMany(AcademicIndicator::class);

@@ -8,6 +8,8 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 
+const relationshipOptions = ['Parent', 'Mother', 'Father', 'Guardian'];
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Admissions', href: '/admissions' },
@@ -100,11 +102,13 @@ export default function AdmissionsIndex({ applicants, classes, addressOptions }:
                                         onChange={(event) => form.setData('guardian_name', event.target.value)}
                                         placeholder="Guardian name"
                                     />
-                                    <Input
-                                        value={form.data.relationship}
-                                        onChange={(event) => form.setData('relationship', event.target.value)}
-                                        placeholder="Relationship"
-                                    />
+                                    <NativeSelect value={form.data.relationship} onChange={(event) => form.setData('relationship', event.target.value)}>
+                                        {relationshipOptions.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
+                                    </NativeSelect>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <Input

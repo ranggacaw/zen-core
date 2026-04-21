@@ -4,7 +4,7 @@ namespace App\Domain\BusinessResources\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Facility extends Model
 {
@@ -16,8 +16,8 @@ class Facility extends Model
         'status',
     ];
 
-    public function allocations(): MorphMany
+    public function roomBookings(): HasMany
     {
-        return $this->morphMany(EventAllocation::class, 'allocatable');
+        return $this->hasMany(RoomBooking::class);
     }
 }

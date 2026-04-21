@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnnouncementController extends Controller
 {
@@ -23,9 +24,14 @@ class AnnouncementController extends Controller
                 ->map(fn (Announcement $announcement) => [
                     'id' => $announcement->id,
                     'title' => $announcement->title,
+                    'content' => $announcement->content,
                     'status' => $announcement->status,
                     'classes' => $announcement->classes->pluck('name')->all(),
+                    'class_ids' => $announcement->classes->pluck('id')->all(),
                     'approver' => $announcement->approver?->name,
+                    'has_cover' => $announcement->cover_path !== null,
+                    'has_document' => $announcement->document_path !== null,
+                    'document_download_url' => $announcement->document_path ? route('communications.documents.download', $announcement) : null,
                     'published_at' => optional($announcement->published_at)?->toDateTimeString(),
                 ]),
             'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
@@ -89,5 +95,15 @@ class AnnouncementController extends Controller
         ]);
 
         return back()->with('success', 'Announcement published to the selected classes.');
+    }
+
+    public function downloadDocument(Announcement $announcement): StreamedResponse
+    {
+        abort_unless($announcement->document_path, 404);
+
+        $disk = config('zen.upload_disk', 'public');
+        abort_unless(Storage::disk($disk)->exists($announcement->document_path), 404);
+
+        return Storage::disk($disk)->download($announcement->document_path, basename($announcement->document_path));
     }
 }

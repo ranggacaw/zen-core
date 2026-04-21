@@ -3,33 +3,42 @@
 namespace App\Domain\BusinessResources\Models;
 
 use App\Domain\StudentLifecycle\Models\Student;
+use App\Domain\WorkforceAccess\Models\Staff;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class BillingRecord extends Model
+class RoomBooking extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'facility_id',
+        'staff_id',
         'student_id',
-        'title',
-        'amount',
+        'purpose',
+        'notes',
+        'starts_at',
+        'ends_at',
         'status',
-        'payment_reference',
-        'paid_at',
-        'provider_payload',
-        'due_on',
     ];
 
     protected function casts(): array
     {
         return [
-            'amount' => 'decimal:2',
-            'paid_at' => 'datetime',
-            'due_on' => 'date',
-            'provider_payload' => 'array',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
         ];
+    }
+
+    public function facility(): BelongsTo
+    {
+        return $this->belongsTo(Facility::class);
+    }
+
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class);
     }
 
     public function student(): BelongsTo

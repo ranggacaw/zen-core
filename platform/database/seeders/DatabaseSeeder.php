@@ -5,14 +5,10 @@ namespace Database\Seeders;
 use App\Domain\AcademicOperations\Models\AcademicIndicator;
 use App\Domain\AcademicOperations\Models\AssessmentEntry;
 use App\Domain\AcademicOperations\Models\ClassSchedule;
-use App\Domain\AcademicOperations\Models\ClassTask;
 use App\Domain\AcademicOperations\Models\ClassTeacherAssignment;
 use App\Domain\AcademicOperations\Models\SchoolClass;
-use App\Domain\BusinessResources\Models\BillingRecord;
-use App\Domain\BusinessResources\Models\EventAllocation;
 use App\Domain\BusinessResources\Models\Facility;
-use App\Domain\BusinessResources\Models\InventoryItem;
-use App\Domain\BusinessResources\Models\SchoolEvent;
+use App\Domain\BusinessResources\Models\RoomBooking;
 use App\Domain\CommunicationEngagement\Models\Announcement;
 use App\Domain\DailyOperations\Models\AttendanceRecord;
 use App\Domain\StudentLifecycle\Models\Applicant;
@@ -125,14 +121,6 @@ class DatabaseSeeder extends Seeder
             'ends_at' => '09:00',
         ]);
 
-        ClassTask::query()->updateOrCreate([
-            'school_class_id' => $class->id,
-            'title' => 'Weekly Reading Log',
-        ], [
-            'description' => 'Summarize one reading assignment for the week.',
-            'due_on' => now()->addWeek()->toDateString(),
-        ]);
-
         $indicator = AcademicIndicator::query()->updateOrCreate([
             'school_class_id' => $class->id,
             'code' => 'BI-01',
@@ -228,22 +216,6 @@ class DatabaseSeeder extends Seeder
         ]);
         $announcement->classes()->syncWithoutDetaching([$class->id]);
 
-        $billing = BillingRecord::query()->updateOrCreate([
-            'student_id' => $student->id,
-            'title' => 'April Tuition',
-        ], [
-            'amount' => 750000,
-            'status' => 'pending',
-            'due_on' => now()->addWeek()->toDateString(),
-        ]);
-
-        $inventory = InventoryItem::query()->updateOrCreate([
-            'name' => 'Projector Unit A',
-        ], [
-            'stock_quantity' => 2,
-            'status' => 'available',
-        ]);
-
         $facility = Facility::query()->updateOrCreate([
             'name' => 'Science Lab',
         ], [
@@ -251,33 +223,18 @@ class DatabaseSeeder extends Seeder
             'status' => 'available',
         ]);
 
-        $event = SchoolEvent::query()->updateOrCreate([
-            'title' => 'Open House 2026',
+        RoomBooking::query()->updateOrCreate([
+            'facility_id' => $facility->id,
+            'purpose' => 'Science remediation session',
+            'starts_at' => now()->addDay()->setTime(9, 0),
         ], [
-            'scheduled_for' => now()->addDays(10),
-            'notes' => 'Prospective parents and students campus visit.',
-        ]);
-
-        EventAllocation::query()->updateOrCreate([
-            'school_event_id' => $event->id,
-            'allocatable_type' => Facility::class,
-            'allocatable_id' => $facility->id,
-        ], [
-            'quantity' => 1,
-            'status' => 'allocated',
-        ]);
-
-        EventAllocation::query()->updateOrCreate([
-            'school_event_id' => $event->id,
-            'allocatable_type' => InventoryItem::class,
-            'allocatable_id' => $inventory->id,
-        ], [
-            'quantity' => 1,
-            'status' => 'allocated',
+            'staff_id' => $teacherStaff->id,
+            'ends_at' => now()->addDay()->setTime(10, 30),
+            'status' => 'scheduled',
+            'notes' => 'Prepare microscopes before students arrive.',
         ]);
 
         $pendingApplicant->touch();
-        $billing->touch();
         $adminStaff->touch();
     }
 }

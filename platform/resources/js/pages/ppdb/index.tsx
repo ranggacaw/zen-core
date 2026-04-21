@@ -11,7 +11,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'PPDB', href: '/peserta-ppdb' },
+    { title: 'Admissions', href: '/peserta-ppdb' },
 ];
 
 interface ApplicantRecord {
@@ -41,6 +41,8 @@ interface PpdbProps {
     classes: Array<{ id: number; name: string }>;
     addressOptions: AddressOptions;
 }
+
+const relationshipOptions = ['Parent', 'Mother', 'Father', 'Guardian'];
 
 function ApplicantCard({ applicant, classes, addressOptions }: { applicant: ApplicantRecord; classes: PpdbProps['classes']; addressOptions: AddressOptions }) {
     const form = useForm({
@@ -105,7 +107,13 @@ function ApplicantCard({ applicant, classes, addressOptions }: { applicant: Appl
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <Input value={form.data.guardian_name} onChange={(event) => form.setData('guardian_name', event.target.value)} placeholder="Guardian name" />
-                    <Input value={form.data.relationship} onChange={(event) => form.setData('relationship', event.target.value)} placeholder="Relationship" />
+                    <NativeSelect value={form.data.relationship} onChange={(event) => form.setData('relationship', event.target.value)}>
+                        {relationshipOptions.map((option) => (
+                            <option key={option} value={option}>
+                                {option}
+                            </option>
+                        ))}
+                    </NativeSelect>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                     <Input type="email" value={form.data.guardian_email} onChange={(event) => form.setData('guardian_email', event.target.value)} placeholder="Guardian email" />
@@ -176,11 +184,11 @@ export default function PpdbIndex({ applicants, classes, addressOptions }: PpdbP
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="PPDB" />
+            <Head title="Admissions" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <PageHeader
-                    title="PPDB management"
+                    title="Admissions (PPDB)"
                     description="Capture applicants, review guardian details, assign placement classes, and promote accepted candidates into active student records."
                 />
 
@@ -235,7 +243,13 @@ export default function PpdbIndex({ applicants, classes, addressOptions }: PpdbP
                                 </NativeSelect>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <Input value={form.data.guardian_name} onChange={(event) => form.setData('guardian_name', event.target.value)} placeholder="Guardian name" />
-                                    <Input value={form.data.relationship} onChange={(event) => form.setData('relationship', event.target.value)} placeholder="Relationship" />
+                                    <NativeSelect value={form.data.relationship} onChange={(event) => form.setData('relationship', event.target.value)}>
+                                        {relationshipOptions.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
+                                    </NativeSelect>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <Input type="email" value={form.data.guardian_email} onChange={(event) => form.setData('guardian_email', event.target.value)} placeholder="Guardian email" />

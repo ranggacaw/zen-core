@@ -6,7 +6,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -14,7 +14,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 interface CommunicationsProps {
-    announcements: Array<{ id: number; title: string; status: string; classes: string[]; approver: string | null; published_at: string | null }>;
+    announcements: Array<{
+        id: number;
+        title: string;
+        content: string;
+        status: string;
+        classes: string[];
+        class_ids: number[];
+        approver: string | null;
+        has_cover: boolean;
+        has_document: boolean;
+        document_download_url: string | null;
+        published_at: string | null;
+    }>;
     classes: Array<{ id: number; name: string }>;
 }
 
@@ -32,7 +44,7 @@ export default function CommunicationsIndex({ announcements, classes }: Communic
             <Head title="Communications" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader title="Communication and engagement" description="Draft governed announcements, route them through approval, and publish them to selected class audiences." />
+                <PageHeader title="Communication and engagement" description="Draft governed announcements, attach supporting documents, route them through approval, and publish them to selected class audiences." />
 
                 <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                     <Card>
@@ -83,21 +95,37 @@ export default function CommunicationsIndex({ announcements, classes }: Communic
                                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                         <div>
                                             <p className="font-semibold">{announcement.title}</p>
+                                            <p className="mt-1 text-sm text-muted-foreground">{announcement.content}</p>
                                             <p className="text-sm text-muted-foreground">Audience: {announcement.classes.join(', ') || 'Not targeted yet'}</p>
                                             <p className="text-sm text-muted-foreground">
                                                 Approver: {announcement.approver ?? 'Pending'} • Published: {announcement.published_at ?? 'Not yet'}
                                             </p>
+                                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                                {announcement.has_cover ? <span className="rounded-full bg-muted px-2 py-1">Cover uploaded</span> : null}
+                                                {announcement.has_document ? <span className="rounded-full bg-muted px-2 py-1">Document attached</span> : null}
+                                            </div>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium uppercase tracking-wide">{announcement.status}</span>
-                                            <Button size="sm" variant="secondary" onClick={() => router.post(route('communications.approve', announcement.id))}>
+                                            {announcement.document_download_url ? (
+                                                <Button size="sm" variant="outline" asChild>
+                                                    <Link href={announcement.document_download_url}>Document</Link>
+                                                </Button>
+                                            ) : null}
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                disabled={announcement.status !== 'draft'}
+                                                onClick={() => router.post(route('communications.approve', announcement.id))}
+                                            >
                                                 Approve
                                             </Button>
                                             <Button
                                                 size="sm"
+                                                disabled={announcement.status !== 'approved' || announcement.class_ids.length === 0}
                                                 onClick={() =>
                                                     router.post(route('communications.publish', announcement.id), {
-                                                        class_ids: classes.slice(0, 1).map((item) => item.id),
+                                                        class_ids: announcement.class_ids,
                                                     })
                                                 }
                                             >

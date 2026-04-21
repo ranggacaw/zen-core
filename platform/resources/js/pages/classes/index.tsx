@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
-import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
@@ -24,9 +23,8 @@ interface ClassesProps {
         students: Array<{ id: number; name: string; student_number: string }>;
         teachers: Array<{ id: number; staff: string | null; subject_name: string | null; is_homeroom: boolean }>;
         schedules: Array<{ id: number; day_of_week: string; subject_name: string; time: string; teacher: string | null }>;
-        tasks: Array<{ id: number; title: string; description: string | null; due_on: string | null }>;
         indicators: Array<{ id: number; code: string; name: string; subject_name: string; semester: string; status: string }>;
-        assessments: Array<{ id: number; student: string | null; subject_name: string; semester: string; score: string }>;
+        assessments: Array<{ id: number; student: string | null; indicator: string | null; subject_name: string; semester: string; score: string }>;
     } | null;
     staff: Array<{ id: number; name: string; role: string }>;
 }
@@ -37,9 +35,8 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
     const classForm = useForm({ name: '', grade_level: '', academic_year: '', room_name: '' });
     const teacherForm = useForm({ staff_id: '', subject_name: '', is_homeroom: false as boolean });
     const scheduleForm = useForm({ staff_id: '', day_of_week: 'Monday', subject_name: '', starts_at: '07:30', ends_at: '09:00' });
-    const taskForm = useForm({ title: '', description: '', due_on: '' });
     const indicatorForm = useForm({ subject_name: '', semester: 'Semester 1', code: '', name: '', status: 'complete' });
-    const assessmentForm = useForm({ student_id: '', academic_indicator_id: '', subject_name: '', semester: 'Semester 1', score: '' });
+    const assessmentForm = useForm({ student_id: '', academic_indicator_id: '', score: '' });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -48,7 +45,7 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <PageHeader
                     title="Academic operations"
-                    description="Run class workspaces with students, teachers, schedules, tasks, indicators, and controlled score entry."
+                    description="Run class workspaces with students, teachers, schedules, indicators, and controlled score entry."
                     actions={
                         <NativeSelect
                             value={selectedClass?.id ?? ''}
@@ -233,33 +230,9 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Tasks, indicators, and scores</CardTitle>
+                                    <CardTitle>Indicators and scores</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="rounded-xl border border-border/60 p-4">
-                                        <h3 className="mb-3 font-medium">Tasks</h3>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            {selectedClass.tasks.map((task) => (
-                                                <div key={task.id}>
-                                                    {task.title} • {task.due_on ?? 'No due date'}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <form
-                                            className="mt-4 space-y-3"
-                                            onSubmit={(event) => {
-                                                event.preventDefault();
-                                                taskForm.post(route('classes.tasks.store', selectedClass.id), { onSuccess: () => taskForm.reset() });
-                                            }}
-                                        >
-                                            <Input value={taskForm.data.title} onChange={(event) => taskForm.setData('title', event.target.value)} placeholder="Task title" />
-                                            <Textarea value={taskForm.data.description} onChange={(event) => taskForm.setData('description', event.target.value)} placeholder="Task description" />
-                                            <div className="flex gap-2">
-                                                <Input type="date" value={taskForm.data.due_on} onChange={(event) => taskForm.setData('due_on', event.target.value)} />
-                                                <Button type="submit">Add task</Button>
-                                            </div>
-                                        </form>
-                                    </div>
                                     <div className="rounded-xl border border-border/60 p-4">
                                         <h3 className="mb-3 font-medium">Indicators</h3>
                                         <div className="space-y-2 text-sm text-muted-foreground">
@@ -296,7 +269,7 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
                                         <div className="space-y-2 text-sm text-muted-foreground">
                                             {selectedClass.assessments.map((assessment) => (
                                                 <div key={assessment.id}>
-                                                    {assessment.student} • {assessment.subject_name} • {assessment.score}
+                                                    {assessment.student} • {assessment.indicator ?? assessment.subject_name} • {assessment.score}
                                                 </div>
                                             ))}
                                         </div>
@@ -304,7 +277,7 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
                                             className="mt-4 grid gap-3 md:grid-cols-2"
                                             onSubmit={(event) => {
                                                 event.preventDefault();
-                                                assessmentForm.post(route('classes.assessments.store', selectedClass.id), { onSuccess: () => assessmentForm.reset('student_id', 'academic_indicator_id', 'subject_name', 'score') });
+                                                assessmentForm.post(route('classes.assessments.store', selectedClass.id), { onSuccess: () => assessmentForm.reset('student_id', 'academic_indicator_id', 'score') });
                                             }}
                                         >
                                             <NativeSelect value={assessmentForm.data.student_id} onChange={(event) => assessmentForm.setData('student_id', event.target.value)}>
@@ -322,18 +295,12 @@ export default function ClassesIndex({ classes, selectedClass, staff }: ClassesP
                                                 <option value="">Indicator</option>
                                                 {selectedClass.indicators.map((indicator) => (
                                                     <option key={indicator.id} value={indicator.id}>
-                                                        {indicator.code} • {indicator.name}
+                                                        {indicator.code} • {indicator.subject_name} • {indicator.name} • {indicator.semester}
                                                     </option>
                                                 ))}
                                             </NativeSelect>
-                                            <Input
-                                                value={assessmentForm.data.subject_name}
-                                                onChange={(event) => assessmentForm.setData('subject_name', event.target.value)}
-                                                placeholder="Subject"
-                                            />
-                                            <Input value={assessmentForm.data.semester} onChange={(event) => assessmentForm.setData('semester', event.target.value)} placeholder="Semester" />
                                             <Input value={assessmentForm.data.score} onChange={(event) => assessmentForm.setData('score', event.target.value)} placeholder="Score" />
-                                            <Button type="submit">Record score</Button>
+                                            <Button type="submit" className="md:col-span-2">Record score</Button>
                                         </form>
                                     </div>
                                 </CardContent>

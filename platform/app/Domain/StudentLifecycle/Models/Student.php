@@ -4,7 +4,6 @@ namespace App\Domain\StudentLifecycle\Models;
 
 use App\Domain\AcademicOperations\Models\AssessmentEntry;
 use App\Domain\AcademicOperations\Models\SchoolClass;
-use App\Domain\BusinessResources\Models\BillingRecord;
 use App\Domain\DailyOperations\Models\AttendanceRecord;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -79,11 +78,6 @@ class Student extends Model
     public function assessmentEntries(): HasMany
     {
         return $this->hasMany(AssessmentEntry::class);
-    }
-
-    public function billingRecords(): HasMany
-    {
-        return $this->hasMany(BillingRecord::class);
     }
 
     public function toSearchableArray(): array
