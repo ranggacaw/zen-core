@@ -53,10 +53,17 @@ export function AppSidebar() {
                           { title: 'Non-Pengajar', url: '/staff/non-pengajar' },
                       ],
                   },
-                  {
-                      title: 'Data Ruangan',
-                      url: '#',
-                      icon: School,
+                   {
+                       title: 'Sekolah',
+                       url: '#',
+                       icon: School,
+                       isActive: page.url.startsWith('/sekolah'),
+                       items: [{ title: 'Informasi', url: '/sekolah/informasi' }],
+                   },
+                   {
+                       title: 'Data Ruangan',
+                       url: '#',
+                       icon: School,
                       isActive: page.url.startsWith('/data-ruangan'),
                       items: [
                           { title: 'Rombongan Belajar', url: '/data-ruangan/rombongan-belajar' },
@@ -83,9 +90,16 @@ export function AppSidebar() {
         ...(role === 'teacher'
             ? [
                   {
-                      title: 'Data Ruangan',
-                      url: '#',
-                      icon: School,
+                       title: 'Sekolah',
+                       url: '#',
+                       icon: School,
+                       isActive: page.url.startsWith('/sekolah'),
+                       items: [{ title: 'Informasi', url: '/sekolah/informasi' }],
+                   },
+                   {
+                       title: 'Data Ruangan',
+                       url: '#',
+                       icon: School,
                       isActive: page.url.startsWith('/data-ruangan') || page.url.startsWith('/classes'),
                       items: [{ title: 'Rombongan Belajar', url: '/data-ruangan/rombongan-belajar' }],
                   },

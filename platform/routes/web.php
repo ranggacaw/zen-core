@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\SchoolInformationController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
@@ -75,6 +76,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('communications/{announcement}/approve', [AnnouncementController::class, 'approve'])->name('communications.approve');
         Route::post('communications/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('communications.publish');
 
+        Route::post('sekolah/informasi/{schoolInformation}/approve', [SchoolInformationController::class, 'approve'])->name('sekolah.informasi.approve');
+
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
         Route::post('resources/facilities', [ResourceController::class, 'storeFacility'])->name('resources.facilities.store');
         Route::post('resources/bookings', [ResourceController::class, 'storeBooking'])->name('resources.bookings.store');
@@ -136,6 +139,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('data-ruangan/rombongan-belajar/{schoolClass}/indicators/{indicator}', [DataRuanganController::class, 'destroyIndicator'])->name('data-ruangan.rombongan-belajar.indicators.destroy');
 
         Route::post('data-ruangan/rombongan-belajar/{schoolClass}/assessments', [DataRuanganController::class, 'storeAssessment'])->name('data-ruangan.rombongan-belajar.assessments.store');
+
+        Route::get('sekolah/informasi', [SchoolInformationController::class, 'index'])->name('sekolah.informasi.index');
+        Route::get('sekolah/informasi/create', [SchoolInformationController::class, 'create'])->name('sekolah.informasi.create');
+        Route::post('sekolah/informasi', [SchoolInformationController::class, 'store'])->name('sekolah.informasi.store');
+        Route::get('sekolah/informasi/{schoolInformation}/edit', [SchoolInformationController::class, 'edit'])->name('sekolah.informasi.edit');
+        Route::put('sekolah/informasi/{schoolInformation}', [SchoolInformationController::class, 'update'])->name('sekolah.informasi.update');
+        Route::delete('sekolah/informasi/{schoolInformation}', [SchoolInformationController::class, 'destroy'])->name('sekolah.informasi.destroy');
+        Route::get('sekolah/informasi/{schoolInformation}/document', [SchoolInformationController::class, 'downloadDocument'])->name('sekolah.informasi.documents.download');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/students.csv', [ReportController::class, 'studentsCsv'])->name('reports.students.csv');
