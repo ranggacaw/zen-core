@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 import { AddressFields, type AddressOptions } from '@/components/platform/address-fields';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
 interface GuardianCreateProps {
-    students: { id: number; name: string }[];
+    students: { id: number; name: string; student_number: string }[];
     addressOptions: AddressOptions;
 }
 
@@ -25,6 +26,7 @@ function defaultValues() {
         relationship: 'Parent',
         phone: '',
         email: '',
+        avatar: null as File | null,
         birth_place: '',
         birth_date: '',
         occupation: '',
@@ -42,6 +44,11 @@ function defaultValues() {
 
 export default function GuardianCreate({ students, addressOptions }: GuardianCreateProps) {
     const form = useForm(defaultValues());
+    const [studentSearch, setStudentSearch] = useState('');
+
+    const filteredStudents = students.filter((student) =>
+        `${student.name} ${student.student_number}`.toLowerCase().includes(studentSearch.toLowerCase()),
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -54,7 +61,7 @@ export default function GuardianCreate({ students, addressOptions }: GuardianCre
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();
-                        form.post(route('guardians.store'));
+                        form.post(route('guardians.store'), { forceFormData: true });
                     }}
                     className="max-w-4xl space-y-6 rounded-lg border bg-card p-6 shadow-sm"
                 >
@@ -86,6 +93,12 @@ export default function GuardianCreate({ students, addressOptions }: GuardianCre
                             <Label htmlFor="phone">Phone</Label>
                             <Input id="phone" value={form.data.phone} onChange={(event) => form.setData('phone', event.target.value)} />
                             {form.errors.phone ? <p className="text-sm text-destructive">{form.errors.phone}</p> : null}
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="avatar">Photo</Label>
+                            <Input id="avatar" type="file" accept="image/*" onChange={(event) => form.setData('avatar', event.target.files?.[0] ?? null)} />
+                            {form.errors.avatar ? <p className="text-sm text-destructive">{form.errors.avatar}</p> : null}
                         </div>
 
                         <div className="space-y-2">
@@ -134,6 +147,12 @@ export default function GuardianCreate({ students, addressOptions }: GuardianCre
 
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="students">Linked students</Label>
+                            <Input
+                                id="student-search"
+                                value={studentSearch}
+                                onChange={(event) => setStudentSearch(event.target.value)}
+                                placeholder="Search by student name or number"
+                            />
                             <NativeSelect
                                 id="students"
                                 multiple
@@ -141,9 +160,9 @@ export default function GuardianCreate({ students, addressOptions }: GuardianCre
                                 onChange={(event) => form.setData('students', Array.from(event.currentTarget.selectedOptions).map((option) => option.value))}
                                 className="min-h-28"
                             >
-                                {students.map((student) => (
+                                {filteredStudents.map((student) => (
                                     <option key={student.id} value={student.id}>
-                                        {student.name}
+                                        {student.name} ({student.student_number})
                                     </option>
                                 ))}
                             </NativeSelect>

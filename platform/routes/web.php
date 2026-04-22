@@ -56,26 +56,14 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('master-data.permissions.destroy');
         });
 
-        Route::get('admissions', [AdmissionsController::class, 'index'])->name('admissions.index');
-        Route::post('admissions', [AdmissionsController::class, 'store'])->name('admissions.store');
-        Route::put('admissions/{applicant}', [AdmissionsController::class, 'update'])->name('admissions.update');
-        Route::delete('admissions/{applicant}', [AdmissionsController::class, 'destroy'])->name('admissions.destroy');
-        Route::post('admissions/{applicant}/approve', [AdmissionsController::class, 'approve'])->name('admissions.approve');
-        Route::post('admissions/{applicant}/reject', [AdmissionsController::class, 'reject'])->name('admissions.reject');
-
         Route::get('peserta-ppdb', [AdmissionsController::class, 'index'])->name('ppdb.index');
-        Route::post('peserta-ppdb', [AdmissionsController::class, 'store'])->name('ppdb.store');
-        Route::put('peserta-ppdb/{applicant}', [AdmissionsController::class, 'update'])->name('ppdb.update');
-        Route::delete('peserta-ppdb/{applicant}', [AdmissionsController::class, 'destroy'])->name('ppdb.destroy');
+        Route::get('peserta-ppdb/{applicant}', [AdmissionsController::class, 'show'])->name('ppdb.show');
         Route::post('peserta-ppdb/{applicant}/approve', [AdmissionsController::class, 'approve'])->name('ppdb.approve');
         Route::post('peserta-ppdb/{applicant}/reject', [AdmissionsController::class, 'reject'])->name('ppdb.reject');
 
         Route::get('peserta-murid', [StudentController::class, 'index'])->name('students.index');
-        Route::get('peserta-murid/create', [StudentController::class, 'create'])->name('students.create');
-        Route::post('peserta-murid', [StudentController::class, 'store'])->name('students.store');
-        Route::get('peserta-murid/{student}/edit', [StudentController::class, 'edit'])->name('students.edit');
-        Route::put('peserta-murid/{student}', [StudentController::class, 'update'])->name('students.update');
-        Route::delete('peserta-murid/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
+        Route::get('peserta-murid/{student}', [StudentController::class, 'show'])->name('students.show');
+        Route::post('peserta-murid/{student}/photo', [StudentController::class, 'updatePhoto'])->name('students.photo.update');
 
         Route::get('peserta-wali', [GuardianController::class, 'index'])->name('guardians.index');
         Route::get('peserta-wali/create', [GuardianController::class, 'create'])->name('guardians.create');

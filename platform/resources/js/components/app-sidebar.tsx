@@ -44,14 +44,14 @@ export function AppSidebar() {
                       ],
                   },
                   { 
-                      title: 'People records', 
+                      title: 'Data Peserta', 
                       url: '#', 
                       icon: Users,
                       isActive: page.url.startsWith('/peserta-'),
                       items: [
-                          { title: 'Students', url: '/peserta-murid' },
-                          { title: 'Guardians', url: '/peserta-wali' },
-                          { title: 'Admissions', url: '/peserta-ppdb' },
+                          { title: 'Peserta Didik', url: '/peserta-murid' },
+                          { title: 'Wali Murid', url: '/peserta-wali' },
+                          { title: 'PPDB', url: '/peserta-ppdb' },
                       ]
                   },
                   {

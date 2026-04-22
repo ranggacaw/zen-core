@@ -1,6 +1,8 @@
 import { Head, router } from '@inertiajs/react';
+
 import AppLayout from '@/layouts/app-layout';
 import { PageHeader } from '@/components/platform/page-header';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { type BreadcrumbItem } from '@/types';
@@ -8,30 +10,18 @@ import { Edit, Plus, Trash2 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Guardians', href: '/peserta-wali' },
+    { title: 'Wali Murid', href: '/peserta-wali' },
 ];
 
 export interface GuardianRecord {
     id: number;
     name: string;
-    relationship: string;
     phone: string | null;
     email: string | null;
-    address_line: string | null;
-    province_code: string | null;
-    regency_code: string | null;
-    district_code: string | null;
-    village_code: string | null;
-    birth_place: string | null;
-    birth_date: string | null;
     occupation: string | null;
     children_count: number | null;
-    religion: string | null;
-    postal_code: string | null;
-    student_ids: number[];
-    students?: string[];
-    applicants?: string[];
-    updated_at?: string;
+    linked_children_count: number;
+    avatar?: string | null;
 }
 
 interface GuardianIndexProps {
@@ -40,61 +30,68 @@ interface GuardianIndexProps {
 
 export default function GuardianIndex({ guardians }: GuardianIndexProps) {
     const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+        if (window.confirm(`Hapus wali murid ${name}?`)) {
             router.delete(route('guardians.destroy', id), { preserveScroll: true });
         }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Guardians" />
+            <Head title="Wali Murid" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader 
-                    title="Guardian records" 
-                    description="Maintain guardian contact records and the student or applicant relationships linked to each family account." 
+                <PageHeader
+                    title="Wali Murid"
+                    description="Kelola data wali, akun login yang terhubung, relasi peserta didik, dan data alamat standar."
                     actions={
                         <Button onClick={() => router.get(route('guardians.create'))}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add guardian
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah wali murid
                         </Button>
-                    } 
+                    }
                 />
 
                 <Card>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto w-full">
-                            <table className="w-full text-sm text-left whitespace-nowrap">
-                                <thead className="bg-muted/30 border-b border-border/50 text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
                                     <tr>
-                                        <th className="px-5 py-3 font-semibold">ID</th>
-                                        <th className="px-5 py-3 font-semibold">Name</th>
-                                        <th className="px-5 py-3 font-semibold">Phone</th>
-                                        <th className="px-5 py-3 font-semibold">Email</th>
-                                        <th className="px-5 py-3 font-semibold text-center">Actions</th>
+                                        <th className="px-6 py-3">Nama</th>
+                                        <th className="px-6 py-3">Avatar</th>
+                                        <th className="px-6 py-3">Jumlah anak</th>
+                                        <th className="px-6 py-3">Pekerjaan</th>
+                                        <th className="px-6 py-3">Kontak</th>
+                                        <th className="px-6 py-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border/50">
-                                    {guardians?.length === 0 ? (
+                                <tbody>
+                                    {guardians.length === 0 ? (
                                         <tr>
-                                             <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
-                                                 No guardian records found.
-                                             </td>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                                                Belum ada data wali murid.
+                                            </td>
                                         </tr>
                                     ) : (
-                                        guardians?.map((guardian) => (
-                                            <tr key={guardian.id} className="hover:bg-muted/20 transition-colors">
-                                                <td className="px-5 py-4 text-muted-foreground">{guardian.id}</td>
-                                                <td className="px-5 py-4 font-medium">{guardian.name}</td>
-                                                <td className="px-5 py-4 text-muted-foreground">{guardian.phone || '-'}</td>
-                                                <td className="px-5 py-4 text-muted-foreground">{guardian.email || '-'}</td>
-                                                <td className="px-5 py-4 text-center">
-                                                    <div className="flex justify-center gap-2">
-                                                        <Button variant="ghost" size="icon" onClick={() => router.get(route('guardians.edit', guardian.id))}>
-                                                            <Edit className="w-4 h-4" />
+                                        guardians.map((guardian) => (
+                                            <tr key={guardian.id} className="border-b last:border-b-0">
+                                                <td className="px-6 py-4 align-top">
+                                                    <div className="font-medium">{guardian.name}</div>
+                                                    {guardian.email ? <div className="text-xs text-muted-foreground">{guardian.email}</div> : null}
+                                                </td>
+                                                <td className="px-6 py-4 align-top">
+                                                    <Badge variant={guardian.avatar ? 'default' : 'outline'}>{guardian.avatar ? 'Tersimpan' : 'Belum ada'}</Badge>
+                                                </td>
+                                                <td className="px-6 py-4 align-top">{guardian.linked_children_count || guardian.children_count || 0}</td>
+                                                <td className="px-6 py-4 align-top">{guardian.occupation ?? '-'}</td>
+                                                <td className="px-6 py-4 align-top">{guardian.phone ?? '-'}</td>
+                                                <td className="px-6 py-4 align-top text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="outline" size="icon" onClick={() => router.get(route('guardians.edit', guardian.id))}>
+                                                            <Edit className="h-4 w-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(guardian.id, guardian.name)}>
-                                                            <Trash2 className="w-4 h-4" />
+                                                        <Button variant="outline" size="icon" className="text-destructive" onClick={() => handleDelete(guardian.id, guardian.name)}>
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </td>

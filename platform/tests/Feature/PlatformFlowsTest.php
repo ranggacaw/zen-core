@@ -50,7 +50,9 @@ class PlatformFlowsTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admissions.approve', $applicant))
+            ->post(route('ppdb.approve', $applicant), [
+                'school_class_id' => $class->id,
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('applicants', [
@@ -110,7 +112,7 @@ class PlatformFlowsTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_manage_student_records_from_peserta_murid(): void
+    public function test_admin_can_review_student_records_from_peserta_murid_and_legacy_management_routes_are_unavailable(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Admin]);
         $guardian = Guardian::query()->create([
@@ -124,46 +126,42 @@ class PlatformFlowsTest extends TestCase
             'room_name' => 'Cempaka',
         ]);
 
-        $this->actingAs($admin)
-            ->post(route('students.store'), [
-                'guardian_id' => $guardian->id,
-                'school_class_id' => $class->id,
-                'name' => 'Arga Pratama',
-                'student_number' => 'STD-6001',
-                'status' => 'active',
-                'address_line' => 'Jl. Kenanga 5',
-            ])
-            ->assertRedirect();
-
-        $student = Student::query()->firstOrFail();
-
-        $this->actingAs($admin)
-            ->put(route('students.update', $student), [
-                'guardian_id' => $guardian->id,
-                'school_class_id' => $class->id,
-                'name' => 'Arga Pratama Updated',
-                'student_number' => 'STD-6001',
-                'status' => 'graduated',
-                'address_line' => 'Jl. Kenanga 6',
-            ])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('students', [
-            'id' => $student->id,
-            'name' => 'Arga Pratama Updated',
-            'status' => 'graduated',
+        $student = Student::query()->create([
+            'guardian_id' => $guardian->id,
+            'school_class_id' => $class->id,
+            'name' => 'Arga Pratama',
+            'student_number' => 'STD-6001',
+            'status' => 'active',
+            'address_line' => 'Jl. Kenanga 5',
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('students.destroy', $student))
-            ->assertRedirect();
+            ->get(route('students.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('students/index')
+                ->where('students.0.name', 'Arga Pratama'));
 
-        $this->assertDatabaseMissing('students', [
+        $this->actingAs($admin)
+            ->get(route('students.show', $student))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('students/show')
+                ->where('student.name', 'Arga Pratama')
+                ->where('student.guardian.name', 'Dewi Lestari'));
+
+        $this->actingAs($admin)->get('/peserta-murid/create')->assertNotFound();
+        $this->actingAs($admin)->get("/peserta-murid/{$student->id}/edit")->assertNotFound();
+        $this->actingAs($admin)->post('/peserta-murid', [])->assertStatus(405);
+        $this->actingAs($admin)->put("/peserta-murid/{$student->id}", [])->assertStatus(405);
+        $this->actingAs($admin)->delete("/peserta-murid/{$student->id}")->assertStatus(405);
+
+        $this->assertDatabaseHas('students', [
             'id' => $student->id,
         ]);
     }
 
-    public function test_admin_can_update_and_delete_pending_ppdb_records_but_not_approved_history(): void
+    public function test_admin_can_review_ppdb_records_and_legacy_management_routes_are_unavailable(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Admin]);
         $class = SchoolClass::query()->create([
@@ -173,81 +171,43 @@ class PlatformFlowsTest extends TestCase
             'room_name' => 'Flamboyan',
         ]);
 
-        $this->actingAs($admin)
-            ->post(route('ppdb.store'), [
-                'name' => 'Salma Putri',
-                'student_number' => 'STD-7001',
-                'school_class_id' => $class->id,
-                'guardian_name' => 'Budi Putra',
-                'guardian_email' => 'budi@example.com',
-                'guardian_phone' => '08111111111',
-                'relationship' => 'Father',
-                'address_line' => 'Jl. Teratai 1',
-            ])
-            ->assertRedirect();
-
-        $applicant = Applicant::query()->firstOrFail();
-
-        $this->actingAs($admin)
-            ->put(route('ppdb.update', $applicant), [
-                'name' => 'Salma Putri Updated',
-                'student_number' => 'STD-7001',
-                'school_class_id' => $class->id,
-                'guardian_name' => 'Budi Putra Updated',
-                'guardian_email' => 'budi.updated@example.com',
-                'guardian_phone' => '08222222222',
-                'relationship' => 'Parent',
-                'address_line' => 'Jl. Teratai 2',
-            ])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('applicants', [
-            'id' => $applicant->id,
-            'name' => 'Salma Putri Updated',
-        ]);
-
-        $this->assertDatabaseHas('guardians', [
-            'id' => $applicant->guardian_id,
-            'name' => 'Budi Putra Updated',
-            'email' => 'budi.updated@example.com',
-        ]);
-
-        $this->actingAs($admin)
-            ->delete(route('ppdb.destroy', $applicant))
-            ->assertRedirect();
-
-        $this->assertDatabaseMissing('applicants', [
-            'id' => $applicant->id,
-        ]);
-
-        $this->assertDatabaseMissing('guardians', [
-            'id' => $applicant->guardian_id,
-        ]);
-
         $guardian = Guardian::query()->create([
-            'name' => 'Rini Astuti',
+            'name' => 'Budi Putra',
             'relationship' => 'Parent',
+            'email' => 'budi@example.com',
         ]);
-        $approvedApplicant = Applicant::query()->create([
+        $applicant = Applicant::query()->create([
             'guardian_id' => $guardian->id,
             'school_class_id' => $class->id,
-            'name' => 'Fajar Hidayat',
-            'student_number' => 'STD-7002',
+            'name' => 'Salma Putri',
+            'student_number' => 'STD-7001',
             'status' => 'pending',
         ]);
 
         $this->actingAs($admin)
-            ->post(route('ppdb.approve', $approvedApplicant))
-            ->assertRedirect();
+            ->get(route('ppdb.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ppdb/index')
+                ->where('applicants.0.name', 'Salma Putri'));
 
         $this->actingAs($admin)
-            ->delete(route('ppdb.destroy', $approvedApplicant))
-            ->assertRedirect()
-            ->assertSessionHas('error');
+            ->get(route('ppdb.show', $applicant))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ppdb/show')
+                ->where('applicant.name', 'Salma Putri')
+                ->where('applicant.guardian.name', 'Budi Putra'));
+
+        $this->actingAs($admin)->post('/peserta-ppdb', [])->assertStatus(405);
+        $this->actingAs($admin)->put("/peserta-ppdb/{$applicant->id}", [])->assertStatus(405);
+        $this->actingAs($admin)->delete("/peserta-ppdb/{$applicant->id}")->assertStatus(405);
+        $this->actingAs($admin)->get('/admissions')->assertNotFound();
+        $this->actingAs($admin)->post("/admissions/{$applicant->id}/approve", [])->assertNotFound();
 
         $this->assertDatabaseHas('applicants', [
-            'id' => $approvedApplicant->id,
-            'status' => 'approved',
+            'id' => $applicant->id,
+            'status' => 'pending',
         ]);
     }
 

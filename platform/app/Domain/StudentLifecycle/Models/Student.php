@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 
 class Student extends Model
@@ -87,5 +88,22 @@ class Student extends Model
             'student_number' => $this->student_number,
             'status' => $this->status,
         ];
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $avatarPath = is_string($this->avatar) ? trim($this->avatar) : $this->avatar;
+
+        if ($avatarPath === null || $avatarPath === '' || $avatarPath === '0') {
+            return null;
+        }
+
+        $disk = config('zen.upload_disk', 'public');
+
+        if ($disk === 'local' || $disk === 'public') {
+            return '/storage/'.$avatarPath;
+        }
+
+        return Storage::disk($disk)->url($avatarPath);
     }
 }

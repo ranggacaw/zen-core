@@ -4,30 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Domain\AcademicOperations\Models\SchoolClass;
 use App\Domain\StudentLifecycle\Models\Applicant;
-use App\Domain\StudentLifecycle\Models\Guardian;
 use App\Domain\StudentLifecycle\Models\Student;
-use App\Http\Controllers\Concerns\ResolvesStudentLifecycleAddressData;
-use App\Services\AddressReferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AdmissionsController extends Controller
 {
-    use ResolvesStudentLifecycleAddressData;
-
-    public function __construct(protected AddressReferenceService $addressReference)
-    {
-    }
-
     public function index(): Response
     {
         return Inertia::render('ppdb/index', [
             'applicants' => Applicant::query()
-                ->with(['guardian:id,name,relationship,email,phone,address_line,province_code,regency_code,district_code,village_code', 'schoolClass:id,name'])
+                ->with(['guardian:id,name,relationship,email,phone', 'schoolClass:id,name'])
                 ->latest()
                 ->get()
                 ->map(fn (Applicant $applicant) => [
@@ -36,144 +26,93 @@ class AdmissionsController extends Controller
                     'student_number' => $applicant->student_number,
                     'status' => $applicant->status,
                     'decision_notes' => $applicant->decision_notes,
-                    'guardian_id' => $applicant->guardian_id,
                     'guardian' => $applicant->guardian?->name,
-                    'guardian_name' => $applicant->guardian?->name,
-                    'guardian_email' => $applicant->guardian?->email,
                     'guardian_phone' => $applicant->guardian?->phone,
-                    'relationship' => $applicant->guardian?->relationship,
-                    'school_class_id' => $applicant->school_class_id,
                     'class' => $applicant->schoolClass?->name,
-                    'address_line' => $applicant->address_line,
-                    'province_code' => $applicant->province_code,
-                    'regency_code' => $applicant->regency_code,
-                    'district_code' => $applicant->district_code,
-                    'village_code' => $applicant->village_code,
                     'updated_at' => $applicant->updated_at->toDateTimeString(),
                 ]),
-            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name']),
-            'addressOptions' => $this->addressOptions($this->addressReference),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function show(Applicant $applicant): Response
     {
-        $validated = $request->validate($this->rules());
+        $applicant->load([
+            'guardian:id,user_id,name,relationship,email,phone,address_line,province_name,regency_name,district_name,village_name',
+            'schoolClass:id,name,grade_level,academic_year,room_name',
+        ]);
 
-        DB::transaction(function () use ($validated) {
-            $guardian = Guardian::query()->create([
-                'name' => $validated['guardian_name'],
-                'email' => $validated['guardian_email'] ?? null,
-                'phone' => $validated['guardian_phone'] ?? null,
-                'relationship' => $validated['relationship'] ?? 'Parent',
-                'address_line' => $validated['address_line'] ?? null,
-                ...$this->addressNames($this->addressReference, $validated),
-            ]);
-
-            Applicant::query()->create([
-                'guardian_id' => $guardian->id,
-                'school_class_id' => $validated['school_class_id'] ?? null,
-                'name' => $validated['name'],
-                'student_number' => $validated['student_number'] ?? null,
-                'status' => 'pending',
-                'address_line' => $validated['address_line'] ?? null,
-                ...$this->addressNames($this->addressReference, $validated),
-            ]);
-        });
-
-        return back()->with('success', 'Applicant created.');
+        return Inertia::render('ppdb/show', [
+            'applicant' => [
+                'id' => $applicant->id,
+                'name' => $applicant->name,
+                'student_number' => $applicant->student_number,
+                'status' => $applicant->status,
+                'decision_notes' => $applicant->decision_notes,
+                'address_line' => $applicant->address_line,
+                'province_name' => $applicant->province_name,
+                'regency_name' => $applicant->regency_name,
+                'district_name' => $applicant->district_name,
+                'village_name' => $applicant->village_name,
+                'guardian' => $applicant->guardian ? [
+                    'name' => $applicant->guardian->name,
+                    'relationship' => $applicant->guardian->relationship,
+                    'email' => $applicant->guardian->email,
+                    'phone' => $applicant->guardian->phone,
+                    'address_line' => $applicant->guardian->address_line,
+                    'province_name' => $applicant->guardian->province_name,
+                    'regency_name' => $applicant->guardian->regency_name,
+                    'district_name' => $applicant->guardian->district_name,
+                    'village_name' => $applicant->guardian->village_name,
+                ] : null,
+                'school_class_id' => $applicant->school_class_id,
+                'school_class' => $applicant->schoolClass ? [
+                    'name' => $applicant->schoolClass->name,
+                    'grade_level' => $applicant->schoolClass->grade_level,
+                    'academic_year' => $applicant->schoolClass->academic_year,
+                    'room_name' => $applicant->schoolClass->room_name,
+                ] : null,
+            ],
+            'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name', 'grade_level', 'academic_year', 'room_name']),
+        ]);
     }
 
-    public function update(Request $request, Applicant $applicant): RedirectResponse
+    public function approve(Request $request, Applicant $applicant): RedirectResponse
     {
-        $validated = $request->validate($this->rules($applicant));
+        $validated = $request->validate([
+            'school_class_id' => ['nullable', 'integer', 'exists:school_classes,id'],
+        ]);
 
-        DB::transaction(function () use ($validated, $applicant) {
-            $guardian = $applicant->guardian;
+        $selectedClassId = $validated['school_class_id'] ?? null;
 
-            if (! $guardian) {
-                $guardian = Guardian::query()->create([
-                    'name' => $validated['guardian_name'],
-                    'relationship' => $validated['relationship'] ?? 'Parent',
+        if (! $selectedClassId && ! $applicant->school_class_id) {
+            return back()->with('error', 'Select a class before approving this PPDB record.');
+        }
+
+        DB::transaction(function () use ($applicant, $selectedClassId): void {
+            if ($selectedClassId) {
+                $applicant->update([
+                    'school_class_id' => $selectedClassId,
                 ]);
             }
 
-            $guardian->update([
-                'name' => $validated['guardian_name'],
-                'email' => $validated['guardian_email'] ?? null,
-                'phone' => $validated['guardian_phone'] ?? null,
-                'relationship' => $validated['relationship'] ?? 'Parent',
-                'address_line' => $validated['address_line'] ?? null,
-                ...$this->addressNames($this->addressReference, $validated),
-            ]);
-
-            $applicant->update([
-                'guardian_id' => $guardian->id,
-                'school_class_id' => $validated['school_class_id'] ?? null,
-                'name' => $validated['name'],
-                'student_number' => $validated['student_number'] ?? null,
-                'address_line' => $validated['address_line'] ?? null,
-                ...$this->addressNames($this->addressReference, $validated),
-            ]);
-
-            if ($applicant->status === 'approved' || Student::query()->where('applicant_id', $applicant->id)->exists()) {
-                $this->syncStudentRecord($applicant->fresh(['guardian']));
-            }
+            $this->syncStudentRecord($applicant->fresh());
         });
 
-        return back()->with('success', 'Applicant updated.');
-    }
-
-    public function approve(Applicant $applicant): RedirectResponse
-    {
-        DB::transaction(function () use ($applicant) {
-            $this->syncStudentRecord($applicant);
-        });
-
-        return back()->with('success', 'Applicant approved.');
+        return to_route('ppdb.show', $applicant)->with('success', 'Applicant approved.');
     }
 
     public function reject(Request $request, Applicant $applicant): RedirectResponse
     {
         $validated = $request->validate([
-            'decision_notes' => ['nullable', 'string', 'max:1000'],
+            'decision_notes' => ['required', 'string', 'max:1000'],
         ]);
 
         $applicant->update([
             'status' => 'rejected',
-            'decision_notes' => $validated['decision_notes'] ?? 'Rejected during admissions review.',
+            'decision_notes' => $validated['decision_notes'],
         ]);
 
-        return back()->with('success', 'Applicant rejected and retained for audit history.');
-    }
-
-    public function destroy(Applicant $applicant): RedirectResponse
-    {
-        if ($applicant->status === 'approved' || Student::query()->where('applicant_id', $applicant->id)->exists()) {
-            return back()->with('error', 'Approved applicants are retained as audit history and cannot be deleted.');
-        }
-
-        DB::transaction(function () use ($applicant) {
-            $guardianId = $applicant->guardian_id;
-
-            $applicant->delete();
-
-            if (! $guardianId) {
-                return;
-            }
-
-            $guardian = Guardian::query()->find($guardianId);
-
-            if (! $guardian) {
-                return;
-            }
-
-            if (! $guardian->students()->exists() && ! $guardian->applicants()->exists()) {
-                $guardian->delete();
-            }
-        });
-
-        return back()->with('success', 'Applicant deleted.');
+        return to_route('ppdb.show', $applicant)->with('success', 'Applicant rejected and retained for audit history.');
     }
 
     protected function nextStudentNumber(): string
@@ -217,48 +156,5 @@ class AdmissionsController extends Controller
             'status' => 'approved',
             'decision_notes' => 'Approved and activated as student record.',
         ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function rules(?Applicant $applicant = null): array
-    {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'student_number' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('applicants', 'student_number')->ignore($applicant?->id),
-                function (string $attribute, mixed $value, \Closure $fail) use ($applicant): void {
-                    if (! is_string($value) || $value === '') {
-                        return;
-                    }
-
-                    $studentQuery = Student::query()->where('student_number', $value);
-
-                    if ($applicant) {
-                        $studentQuery->where(function ($query) use ($applicant) {
-                            $query->whereNull('applicant_id')->orWhere('applicant_id', '!=', $applicant->id);
-                        });
-                    }
-
-                    if ($studentQuery->exists()) {
-                        $fail('The student number has already been taken.');
-                    }
-                },
-            ],
-            'school_class_id' => ['nullable', 'integer', 'exists:school_classes,id'],
-            'guardian_name' => ['required', 'string', 'max:255'],
-            'guardian_email' => ['nullable', 'email', 'max:255'],
-            'guardian_phone' => ['nullable', 'string', 'max:50'],
-            'relationship' => ['nullable', 'string', 'max:100'],
-            'address_line' => ['nullable', 'string', 'max:255'],
-            'province_code' => ['nullable', 'string', 'max:50'],
-            'regency_code' => ['nullable', 'string', 'max:50'],
-            'district_code' => ['nullable', 'string', 'max:50'],
-            'village_code' => ['nullable', 'string', 'max:50'],
-        ];
     }
 }
