@@ -102,4 +102,56 @@ class AddressReferenceService
             return $fallback;
         }
     }
+
+    public function findProvinceName(string $code): ?string
+    {
+        $provinces = $this->provinces();
+
+        foreach ($provinces as $province) {
+            if ($province['code'] === $code) {
+                return $province['name'];
+            }
+        }
+
+        return null;
+    }
+
+    public function findRegencyName(string $provinceCode, string $code): ?string
+    {
+        $regencies = $this->regencies($provinceCode);
+
+        foreach ($regencies as $regency) {
+            if ($regency['code'] === $code) {
+                return $regency['name'];
+            }
+        }
+
+        return null;
+    }
+
+    public function findDistrictName(string $regencyCode, string $code): ?string
+    {
+        $districts = $this->districts($regencyCode);
+
+        foreach ($districts as $district) {
+            if ($district['code'] === $code) {
+                return $district['name'];
+            }
+        }
+
+        return null;
+    }
+
+    public function findVillageName(string $districtCode, string $code): ?string
+    {
+        $villages = $this->villages($districtCode);
+
+        foreach ($villages as $village) {
+            if ($village['code'] === $code) {
+                return $village['name'];
+            }
+        }
+
+        return null;
+    }
 }

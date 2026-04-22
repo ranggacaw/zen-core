@@ -152,7 +152,7 @@ export default function UserIndex() {
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="ghost" size="icon" asChild>
                                                     <Link
-                                                        href={`/master-data/users/${user.id}/profile`}
+                                                        href={route('master-data.users.profile', user.id)}
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Link>

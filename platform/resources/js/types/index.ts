@@ -50,7 +50,47 @@ export interface User {
     updated_at: string;
     roles?: Role[];
     permissions?: Permission[];
+    staff?: StaffData | null;
     [key: string]: unknown;
+}
+
+export interface StaffData {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    role_display: string;
+    staff_type: string | null;
+    position: string | null;
+    employee_number: string | null;
+    employment_status: string | null;
+    avatar: string | null;
+    avatar_url?: string | null;
+    nik: string | null;
+    education: string | null;
+    specialization_subjects: number[] | null;
+    phone: string | null;
+    gender: string | null;
+    birth_place: string | null;
+    birth_date: string | null;
+    nip: string | null;
+    religion: string | null;
+    bank_name: string | null;
+    bank_account: string | null;
+    join_date: string | null;
+    end_date: string | null;
+    decree_permanent: string | null;
+    decree_contract: string | null;
+    address_line: string | null;
+    province_code: string | null;
+    province_name: string | null;
+    regency_code: string | null;
+    regency_name: string | null;
+    district_code: string | null;
+    district_name: string | null;
+    village_code: string | null;
+    village_name: string | null;
+    postal_code: string | null;
 }
 
 export interface Role {
@@ -65,6 +105,18 @@ export interface Permission {
     name: string;
     group_name?: string;
     description?: string;
+}
+
+export interface AddressOption {
+    code: string;
+    name: string;
+}
+
+export interface AddressOptions {
+    provinces: AddressOption[];
+    regencies: AddressOption[];
+    districts: AddressOption[];
+    villages: AddressOption[];
 }
 
 export interface PaginatedData<T> {

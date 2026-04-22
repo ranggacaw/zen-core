@@ -28,6 +28,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('address-reference', AddressReferenceController::class)->name('address-reference.index');
 
     Route::middleware('role:admin')->group(function () {
+        Route::get('masterdata/user/{user}/profile', [UserController::class, 'profile'])->name('master-data.users.profile');
+        Route::put('masterdata/user/{user}/profile', [UserController::class, 'updateProfile'])->name('master-data.users.profile.update');
+        Route::put('masterdata/user/{user}/password', [UserController::class, 'updatePassword'])->name('master-data.users.password');
+
         Route::prefix('master-data')->group(function () {
             Route::get('users', [UserController::class, 'index'])->name('master-data.users.index');
             Route::get('users/create', [UserController::class, 'create'])->name('master-data.users.create');
@@ -35,8 +39,6 @@ Route::middleware(['auth'])->group(function () {
             Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('master-data.users.edit');
             Route::put('users/{user}', [UserController::class, 'update'])->name('master-data.users.update');
             Route::delete('users/{user}', [UserController::class, 'destroy'])->name('master-data.users.destroy');
-            Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('master-data.users.password');
-            Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('master-data.users.profile');
 
             Route::get('user-groups', [RoleController::class, 'index'])->name('master-data.user-groups.index');
             Route::get('user-groups/create', [RoleController::class, 'create'])->name('master-data.user-groups.create');
